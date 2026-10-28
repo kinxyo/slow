@@ -19,10 +19,12 @@ style: "auto"
 mouse: false
 # use pager to display markdown
 pager: false
-# word-wrap at width
-width: 80
-# show all files, including hidden and ignored.
+# width of the text column, centered on screen (default 100; 0 turns wrapping off)
+# width: 100
+# show all files, including hidden and system ones
 all: false
+# skip files matched by .gitignore
+gitignore: false
 `
 
 var configCmd = &cobra.Command{

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"strings"
 	"testing"
 )
 
@@ -37,5 +38,11 @@ func TestSloFlags(t *testing.T) {
 		if !v.check() {
 			t.Errorf("Parsing flag failed: %s", v.args)
 		}
+	}
+}
+
+func TestDefaultConfigDoesNotPinTheWidth(t *testing.T) {
+	if strings.Contains(strings.ReplaceAll(defaultConfig, "# width", ""), "width:") {
+		t.Error("a width in the default config file overrides the column for everyone")
 	}
 }
