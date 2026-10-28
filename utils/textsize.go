@@ -28,13 +28,13 @@ var textSizingEnabled = sync.OnceValue(detectTextSizing)
 
 // TextSizingEnabled reports whether the terminal supports kitty's text
 // sizing protocol (OSC 66), auto-detecting support on first call and caching
-// the result. Set GLOW_TEXT_SIZING to on/off to override detection.
+// the result. Set SLO_TEXT_SIZING to on/off to override detection.
 func TextSizingEnabled() bool {
 	return textSizingEnabled()
 }
 
 func detectTextSizing() bool {
-	switch strings.ToLower(strings.TrimSpace(os.Getenv("GLOW_TEXT_SIZING"))) {
+	switch strings.ToLower(strings.TrimSpace(os.Getenv("SLO_TEXT_SIZING"))) {
 	case "0", "false", "off", "no":
 		return false
 	case "1", "true", "on", "yes":

@@ -6,7 +6,7 @@ import (
 )
 
 func TestGlamourRenderTextSizing(t *testing.T) {
-	t.Setenv("GLOW_TEXT_SIZING", "on")
+	t.Setenv("SLO_TEXT_SIZING", "on")
 
 	common := &commonModel{
 		cfg: Config{

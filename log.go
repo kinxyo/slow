@@ -11,11 +11,11 @@ import (
 )
 
 func getLogFilePath() (string, error) {
-	dir, err := gap.NewScope(gap.User, "glow").CacheDir()
+	dir, err := gap.NewScope(gap.User, "slo").CacheDir()
 	if err != nil {
 		return "", fmt.Errorf("unable to get cache dir: %w", err)
 	}
-	return filepath.Join(dir, "glow.log"), nil
+	return filepath.Join(dir, "slo.log"), nil
 }
 
 func setupLog() (func() error, error) {

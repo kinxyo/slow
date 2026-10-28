@@ -28,16 +28,16 @@ all: false
 var configCmd = &cobra.Command{
 	Use:     "config",
 	Hidden:  false,
-	Short:   "Edit the glow config file",
-	Long:    paragraph(fmt.Sprintf("\n%s the glow config file. We’ll use EDITOR to determine which editor to use. If the config file doesn't exist, it will be created.", keyword("Edit"))),
-	Example: paragraph("glow config\nglow config --config path/to/config.yml"),
+	Short:   "Edit the slo config file",
+	Long:    paragraph(fmt.Sprintf("\n%s the slo config file. We’ll use EDITOR to determine which editor to use. If the config file doesn't exist, it will be created.", keyword("Edit"))),
+	Example: paragraph("slo config\nslo config --config path/to/config.yml"),
 	Args:    cobra.NoArgs,
 	RunE: func(*cobra.Command, []string) error {
 		if err := ensureConfigFile(); err != nil {
 			return err
 		}
 
-		c, err := editor.Cmd("Glow", configFile)
+		c, err := editor.Cmd("slo", configFile)
 		if err != nil {
 			return fmt.Errorf("unable to set config file: %w", err)
 		}

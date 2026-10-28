@@ -1,4 +1,4 @@
-// Package ui provides the main UI for the glow application.
+// Package ui provides the main UI for the slow application.
 package ui
 
 import (
@@ -9,8 +9,8 @@ import (
 	"time"
 
 	tea "charm.land/bubbletea/v2"
-	"charm.land/glow/v3/utils"
 	"github.com/charmbracelet/log"
+	"github.com/kinxyo/slow/utils"
 	"github.com/muesli/gitcha"
 )
 
@@ -27,7 +27,7 @@ var markdownExtensions = []string{
 // restores the terminal state and must be called after the program exits.
 func NewProgram(cfg Config, content string) (*tea.Program, func()) {
 	log.Debug(
-		"Starting glow",
+		"Starting slo",
 		"glamour",
 		cfg.GlamourEnabled,
 	)

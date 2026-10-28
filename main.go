@@ -1,4 +1,4 @@
-// Package main provides the entry point for the Glow CLI application.
+// Package main provides the entry point for the slow CLI application, slo.
 package main
 
 import (
@@ -18,10 +18,10 @@ import (
 
 	"charm.land/glamour/v2"
 	"charm.land/glamour/v2/styles"
-	"charm.land/glow/v3/ui"
-	"charm.land/glow/v3/utils"
 	"github.com/caarlos0/env/v11"
 	"github.com/charmbracelet/log"
+	"github.com/kinxyo/slow/ui"
+	"github.com/kinxyo/slow/utils"
 	gap "github.com/muesli/go-app-paths"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -48,10 +48,10 @@ var (
 	mouse            bool
 
 	rootCmd = &cobra.Command{
-		Use:   "glow [SOURCE|DIR]",
-		Short: "Render markdown on the CLI, with pizzazz!",
+		Use:   "slo [SOURCE|DIR]",
+		Short: "Read long markdown documents in the terminal, mermaid diagrams included",
 		Long: paragraph(
-			fmt.Sprintf("\nRender markdown on the CLI, %s!", keyword("with pizzazz")),
+			fmt.Sprintf("\nRead long markdown documents in the terminal, %s.", keyword("mermaid diagrams included")),
 		),
 		SilenceErrors:    false,
 		SilenceUsage:     true,
@@ -240,7 +240,7 @@ func execute(cmd *cobra.Command, args []string) error {
 	// TUI with possible dir argument
 	case 1:
 		// Validate that the argument is a directory. If it's not treat it as
-		// an argument to the non-TUI version of Glow (via fallthrough).
+		// an argument to the non-TUI version of slow (via fallthrough).
 		info, err := os.Stat(args[0])
 		if err == nil && info.IsDir() {
 			p, err := filepath.Abs(args[0])
@@ -428,7 +428,7 @@ func init() {
 	rootCmd.Version = Version
 	rootCmd.InitDefaultCompletionCmd()
 
-	// "Glow Classic" cli arguments
+	// Command line arguments
 	rootCmd.PersistentFlags().StringVar(&configFile, "config", "", fmt.Sprintf("config file (default %s)", viper.GetViper().ConfigFileUsed()))
 	rootCmd.Flags().BoolVarP(&pager, "pager", "p", false, "display with pager")
 	rootCmd.Flags().BoolVarP(&tui, "tui", "t", false, "display with tui")
@@ -461,7 +461,7 @@ func init() {
 }
 
 func tryLoadConfigFromDefaultPlaces() {
-	scope := gap.NewScope(gap.User, "glow")
+	scope := gap.NewScope(gap.User, "slo")
 	dirs, err := scope.ConfigDirs()
 	if err != nil {
 		fmt.Println("Could not load find configuration directory.")
@@ -469,10 +469,10 @@ func tryLoadConfigFromDefaultPlaces() {
 	}
 
 	if c := os.Getenv("XDG_CONFIG_HOME"); c != "" {
-		dirs = append([]string{filepath.Join(c, "glow")}, dirs...)
+		dirs = append([]string{filepath.Join(c, "slo")}, dirs...)
 	}
 
-	if c := os.Getenv("GLOW_CONFIG_HOME"); c != "" {
+	if c := os.Getenv("SLO_CONFIG_HOME"); c != "" {
 		dirs = append([]string{c}, dirs...)
 	}
 
@@ -480,9 +480,9 @@ func tryLoadConfigFromDefaultPlaces() {
 		viper.AddConfigPath(v)
 	}
 
-	viper.SetConfigName("glow")
+	viper.SetConfigName("slo")
 	viper.SetConfigType("yaml")
-	viper.SetEnvPrefix("glow")
+	viper.SetEnvPrefix("slo")
 	viper.AutomaticEnv()
 
 	if err := viper.ReadInConfig(); err != nil {
@@ -497,7 +497,7 @@ func tryLoadConfigFromDefaultPlaces() {
 	}
 
 	if viper.ConfigFileUsed() == "" {
-		configFile = filepath.Join(dirs[0], "glow.yml")
+		configFile = filepath.Join(dirs[0], "slo.yml")
 	}
 	if err := ensureConfigFile(); err != nil {
 		log.Error("Could not create default configuration", "error", err)

@@ -1,4 +1,4 @@
-module charm.land/glow/v3
+module github.com/kinxyo/slow
 
 go 1.26.7
 

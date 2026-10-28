@@ -18,8 +18,12 @@ test:
 	go vet ./...
 	go test -race -count=1 ./...
 
+# follow the log the viewer writes (~/.cache/slo/slo.log)
+log:
+	tail -f "$${XDG_CACHE_HOME:-$$HOME/.cache}/slo/slo.log"
+
 # direct imports of each package (own packages shown by name)
 deps:
 	@go list -f '{{.Name}}: {{join .Imports " "}}' ./... | sed 's#$(MODULE)/##g'
 
-.PHONY: run prod install test deps
+.PHONY: run prod install test deps log

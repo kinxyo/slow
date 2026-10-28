@@ -4,7 +4,7 @@ import (
 	"testing"
 )
 
-func TestGlowFlags(t *testing.T) {
+func TestSloFlags(t *testing.T) {
 	tt := []struct {
 		args  []string
 		check func() bool

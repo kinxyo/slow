@@ -144,11 +144,11 @@ func TestApplyTextSizingNestedStyles(t *testing.T) {
 }
 
 func TestDetectTextSizingEnvOverride(t *testing.T) {
-	t.Setenv("GLOW_TEXT_SIZING", "off")
+	t.Setenv("SLO_TEXT_SIZING", "off")
 	if detectTextSizing() {
 		t.Error("expected detection to be disabled")
 	}
-	t.Setenv("GLOW_TEXT_SIZING", "on")
+	t.Setenv("SLO_TEXT_SIZING", "on")
 	if !detectTextSizing() {
 		t.Error("expected detection to be forced on")
 	}
@@ -172,13 +172,13 @@ func TestGlamourStyleTextSizing(t *testing.T) {
 	}
 
 	textSizingEnabled = sync.OnceValue(detectTextSizing)
-	t.Setenv("GLOW_TEXT_SIZING", "off")
+	t.Setenv("SLO_TEXT_SIZING", "off")
 	if out := render(t); strings.Contains(out, markerPrefix) {
 		t.Errorf("expected no heading markers when disabled, got %q", out)
 	}
 
 	textSizingEnabled = sync.OnceValue(detectTextSizing)
-	t.Setenv("GLOW_TEXT_SIZING", "on")
+	t.Setenv("SLO_TEXT_SIZING", "on")
 	out := render(t)
 	if strings.Contains(out, markerOpen(1)) {
 		t.Errorf("expected no H1 markers (background color), got %q", out)
