@@ -1,6 +1,9 @@
 package utils
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestCenterBlock(t *testing.T) {
 	cases := []struct {
@@ -34,12 +37,48 @@ func TestBlockWidth(t *testing.T) {
 	}
 }
 
-func TestCenterBlockPad(t *testing.T) {
-	out, pad := CenterBlockPad("abcd", 10)
-	if pad != 3 || out != "   abcd" {
-		t.Errorf("got %q, %d", out, pad)
+func TestCenterPaddingAndPadBlock(t *testing.T) {
+	cases := []struct{ block, width, want int }{
+		{4, 10, 3}, {4, 4, 0}, {6, 4, 0}, {4, 0, 0}, {0, 7, 3},
 	}
-	if out, pad := CenterBlockPad("abcd", 4); pad != 0 || out != "abcd" {
-		t.Errorf("a full-width block is untouched, got %q, %d", out, pad)
+	for _, c := range cases {
+		if got := CenterPadding(c.block, c.width); got != c.want {
+			t.Errorf("CenterPadding(%d, %d) = %d, want %d", c.block, c.width, got, c.want)
+		}
+	}
+	if got := PadBlock("ab\n\ncd", 2); got != "  ab\n\n  cd" {
+		t.Errorf("PadBlock = %q", got)
+	}
+	if got := PadBlock("ab\n", 2); got != "  ab\n" {
+		t.Errorf("PadBlock keeps a final newline, got %q", got)
+	}
+	if got := PadBlock("ab", 0); got != "ab" {
+		t.Errorf("PadBlock with no padding = %q", got)
+	}
+}
+
+func TestBlockWidthSequences(t *testing.T) {
+	cases := map[string]int{
+		"plain":                              5,
+		"\x1b[38;5;252mhi\x1b[m   ":          2,
+		"a\x1b]8;;http://x\x07b\x1b]8;;\x07": 2,
+		"\x1b]66;s=2;hi\x1b\\":               0,
+		"日本":                                 4,
+		"a\x1b":                              1, // an escape cut short
+		"\x1b[31":                            0,
+		"   ":                                0,
+	}
+	for in, want := range cases {
+		if got := BlockWidth(in); got != want {
+			t.Errorf("BlockWidth(%q) = %d, want %d", in, got, want)
+		}
+	}
+}
+
+func BenchmarkBlockWidth(b *testing.B) {
+	line := "\x1b[38;5;252m" + strings.Repeat("\x1b[38;5;252m \x1b[m", 80) + "\n"
+	s := strings.Repeat(line, 2000)
+	for b.Loop() {
+		BlockWidth(s)
 	}
 }
