@@ -1,6 +1,6 @@
 # Spec 1 — reading long documents fast
 
-Status: **in progress** — decisions accepted; phase 0 done.
+Status: **in progress** — decisions accepted; phases 0 and 1 done.
 
 This is a sprint: one batch of related work, built phase by phase, each phase about a day
 and leaving slow working. Process: [PROCESS.md](PROCESS.md) (local copy, git-ignored).
@@ -32,7 +32,7 @@ Each phase leaves the app working and is committed on its own.
 0. **Rename** ([00](00-repo-and-rebrand.md)) — *done*. Module path, binary, config and cache
    directories, help text, man page, status-bar badge, Charm's tagline. A rename commit
    with no behaviour change.
-1. **Debug bar** ([04](04-debug-bar.md)). Stats struct filled by the renderer and the size
+1. **Debug bar** ([04](04-debug-bar.md)) — *done*. Stats struct filled by the renderer and the size
    handler; one line above the status bar, toggled with `D`.
 2. **Width and live resize** ([06](06-width-and-resize.md)). Reproduce with the debug bar,
    name the cause, fix it, add a resize test. Includes the pty harness fix (answer the
@@ -105,7 +105,12 @@ The Go version of PROCESS.md's list:
 
 ## Rough edges
 
-_(none yet)_
+- **Rendering is slow on a long document** (found 2026-10-28 with the debug bar). A 1770-line
+  file with 18 mermaid blocks takes about 550 ms to render, of which mermaid is 4 ms and
+  glamour about 500 ms. The output is 2.1 MB for 2069 lines because glamour pads every line
+  with styled spaces. Every column change (`+`/`-`) and every resize re-renders, so live
+  adjustment lags on long files. Options for phase 2: debounce resize renders, render only
+  the part near the viewport, or strip the padding glamour adds. Not yet decided.
 
 ## As built
 

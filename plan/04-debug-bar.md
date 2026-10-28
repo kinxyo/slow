@@ -1,5 +1,10 @@
 # 04 — debug bar
 
+**Done** (Sprint 1, phase 1). `D` toggles it, `--debug-bar` starts with it on. It shows terminal
+and viewport size, column, wrap width and padding, line count, widest line and size, scroll
+position, render time and count, mermaid blocks drawn or left plain, and text sizing. The
+sidebar fields wait for the sidebar. Design notes follow.
+
 ## Why
 
 The width problem ([06](06-width-and-resize.md)) can't be diagnosed by guessing. A bar

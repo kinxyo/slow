@@ -28,7 +28,7 @@ criteria so "done" is checkable.
 - [ ] 02 — scroll acceleration and section jumping (`]`/`[`) — [02-scroll-and-sections.md](02-scroll-and-sections.md)
 - [ ] 03 — contents sidebar from `#`/`##` headings, shown at full-screen size
       — [03-contents-sidebar.md](03-contents-sidebar.md)
-- [ ] 04 — debug bar (render stats, width, zoom) — [04-debug-bar.md](04-debug-bar.md)
+- [x] 04 — debug bar (render stats, width, zoom) — [04-debug-bar.md](04-debug-bar.md)
 - [ ] 06 — width problem and live resize — [06-width-and-resize.md](06-width-and-resize.md)
 - [ ] 05 — mermaid extras: `LR`, nested subgraphs, more diagram types (only when a real
       document needs it) — [05-mermaid.md](05-mermaid.md)
