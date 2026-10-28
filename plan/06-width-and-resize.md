@@ -1,5 +1,18 @@
 # 06 — width and live resize
 
+## Result (2026-10-28, Sprint 1 phase 2)
+
+**Cause of the narrow text:** the default config file Glow writes on first run contains
+`width: 80`, and a width from the config counts as an explicit choice, so the terminal width
+was never used. The template no longer pins it. Files already written keep the line.
+
+**Resize:** `WindowSizeMsg` did trigger a re-render, but each render took about 550 ms (half of
+it a regular expression in the width measuring), renders could finish out of order, and a
+resize before the first render made the document open at the bottom. Now: widths are measured
+by a scanner; rendering is two stages (glamour, then centering); a resize that leaves the wrap
+width alone only re-centers (about 27 ms); stale renders are dropped; the place is kept only
+when there is something to keep. Checked in the real binary through a pseudo-terminal.
+
 ## Update 2026-10-28
 
 The behaviour is now a centered column, 100 columns by default, adjustable while reading

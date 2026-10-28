@@ -1,6 +1,6 @@
 # Spec 1 — reading long documents fast
 
-Status: **in progress** — decisions accepted; phases 0 and 1 done.
+Status: **in progress** — decisions accepted; phases 0, 1 and 2 done.
 
 This is a sprint: one batch of related work, built phase by phase, each phase about a day
 and leaving slow working. Process: [PROCESS.md](PROCESS.md) (local copy, git-ignored).
@@ -34,7 +34,7 @@ Each phase leaves the app working and is committed on its own.
    with no behaviour change.
 1. **Debug bar** ([04](04-debug-bar.md)) — *done*. Stats struct filled by the renderer and the size
    handler; one line above the status bar, toggled with `D`.
-2. **Width and live resize** ([06](06-width-and-resize.md)). Reproduce with the debug bar,
+2. **Width and live resize** ([06](06-width-and-resize.md)) — *done*. Reproduce with the debug bar,
    name the cause, fix it, add a resize test. Includes the pty harness fix (answer the
    start-up terminal queries).
 3. **Scroll acceleration** ([02](02-scroll-and-sections.md), part A). Pure ramp function,
@@ -105,12 +105,20 @@ The Go version of PROCESS.md's list:
 
 ## Rough edges
 
-- **Rendering is slow on a long document** (found 2026-10-28 with the debug bar). A 1770-line
-  file with 18 mermaid blocks takes about 550 ms to render, of which mermaid is 4 ms and
-  glamour about 500 ms. The output is 2.1 MB for 2069 lines because glamour pads every line
-  with styled spaces. Every column change (`+`/`-`) and every resize re-renders, so live
-  adjustment lags on long files. Options for phase 2: debounce resize renders, render only
-  the part near the viewport, or strip the padding glamour adds. Not yet decided.
+- **Rendering is still slow on a long document.** Phase 2 took a 1770-line file with 18 mermaid
+  blocks from about 550 ms to about 245 ms a render; glamour itself is the rest (mermaid is 4
+  ms). A resize that does not change the wrap width now costs about 27 ms and skips glamour,
+  but a change of wrap width (`+`/`-` below the terminal width, or a narrow terminal) still
+  renders in full, in the background, and the older render is dropped if a newer one was asked
+  for. Options if it still feels slow: render only the part near the viewport, or split the
+  document at headings and render the parts in parallel (risky at block boundaries).
+- **Existing config files keep `width: 80`.** Glow's default config file pinned `width: 80`, and
+  slo inherited that until phase 2, which is why text never used the width of the screen. The
+  template no longer sets it, but a file that was already written still does, and a width in
+  the file counts as an explicit choice. Delete the line, or set `width: 100`.
+- **The terminal check is not in the repo.** Phase 2 was checked by driving the real binary in
+  a pseudo-terminal with a small screen emulator (answering the start-up colour and cursor
+  queries); the scripts are scratch files, not committed.
 
 ## As built
 
