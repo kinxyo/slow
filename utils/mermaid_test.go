@@ -202,3 +202,17 @@ func TestWrapText(t *testing.T) {
 		}
 	}
 }
+
+func TestRenderMermaidStats(t *testing.T) {
+	md := "```mermaid\nflowchart TD\n  A --> B\n```\n\n```mermaid\nsequenceDiagram\n  A->>B: hi\n```\n\n```go\nx := 1\n```\n"
+	out, stats := RenderMermaidStats(md, 80)
+	if stats.Drawn != 1 || stats.Fallback != 1 {
+		t.Errorf("stats = %+v, want 1 drawn and 1 fallback", stats)
+	}
+	if out != RenderMermaid(md, 80) {
+		t.Error("RenderMermaid and RenderMermaidStats should produce the same text")
+	}
+	if _, stats := RenderMermaidStats("no diagrams here", 80); stats != (MermaidStats{}) {
+		t.Errorf("stats = %+v, want zero", stats)
+	}
+}

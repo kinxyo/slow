@@ -41,6 +41,7 @@ var (
 	width            uint
 	showAllFiles     bool
 	obeyGitignore    bool
+	debugBar         bool
 	widthAuto        bool
 	showLineNumbers  bool
 	preserveNewLines bool
@@ -383,6 +384,7 @@ func runTUI(path string, content string) error {
 	cfg.Path = path
 	cfg.ShowAllFiles = showAllFiles
 	cfg.ObeyGitignore = obeyGitignore
+	cfg.ShowDebugBar = debugBar
 	cfg.ShowLineNumbers = showLineNumbers
 	cfg.GlamourMaxWidth = width
 	if widthAuto {
@@ -433,6 +435,7 @@ func init() {
 	rootCmd.Flags().StringVarP(&style, "style", "s", "auto", "style name or JSON path")
 	rootCmd.Flags().UintVarP(&width, "width", "w", 0, "word-wrap at width (set to 0 to disable)")
 	rootCmd.Flags().BoolVarP(&showAllFiles, "all", "a", false, "show system files and directories (TUI-mode only)")
+	rootCmd.Flags().BoolVar(&debugBar, "debug-bar", false, "show the debug bar in the viewer (toggle with D)")
 	rootCmd.Flags().BoolVar(&obeyGitignore, "gitignore", false, "skip files matched by .gitignore (TUI-mode only)")
 	rootCmd.Flags().BoolVarP(&showLineNumbers, "line-numbers", "l", false, "show line numbers (TUI-mode only)")
 	rootCmd.Flags().BoolVarP(&preserveNewLines, "preserve-new-lines", "n", false, "preserve newlines in the output")

@@ -7,6 +7,7 @@ const DefaultColumn = 100
 type Config struct {
 	ShowAllFiles     bool
 	ObeyGitignore    bool
+	ShowDebugBar     bool
 	ShowLineNumbers  bool
 	Gopath           string `env:"GOPATH"`
 	HomeDir          string `env:"HOME"`

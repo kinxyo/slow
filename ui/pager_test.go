@@ -27,7 +27,7 @@ func TestGlamourRenderTextSizing(t *testing.T) {
 	m.currentDocument = markdown{Note: "test.md"}
 	m.setSize(80, 24)
 
-	out, err := glamourRender(m, "# Hello\n\n## World\n")
+	out, _, err := glamourRenderStats(m, "# Hello\n\n## World\n")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -140,7 +140,7 @@ func TestColumnWidthShapesTheText(t *testing.T) {
 	doc := strings.Repeat("lorem ipsum dolor sit amet consectetur ", 80) + "\n"
 	m := newTestPager(100, 200, 40)
 
-	out, err := glamourRender(m, doc)
+	out, _, err := glamourRenderStats(m, doc)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -156,7 +156,7 @@ func TestColumnWidthShapesTheText(t *testing.T) {
 	for range 3 {
 		m, _ = m.update(key("-"))
 	}
-	narrow, err := glamourRender(m, doc)
+	narrow, _, err := glamourRenderStats(m, doc)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -172,7 +172,7 @@ func TestColumnWidthShapesTheText(t *testing.T) {
 
 func TestColumnNeverExceedsTheTerminal(t *testing.T) {
 	m := newTestPager(100, 60, 40)
-	out, err := glamourRender(m, strings.Repeat("word ", 200)+"\n")
+	out, _, err := glamourRenderStats(m, strings.Repeat("word ", 200)+"\n")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -190,7 +190,7 @@ func TestPlaceIsKeptWhenTheTextReflows(t *testing.T) {
 	if !m.keepPlace {
 		t.Fatal("changing the column should remember the place")
 	}
-	m, _ = m.update(contentRenderedMsg(strings.TrimSuffix(strings.Repeat("line\n", 400), "\n")))
+	m, _ = m.update(contentRenderedMsg{body: strings.TrimSuffix(strings.Repeat("line\n", 400), "\n")})
 	h := float64(m.viewport.Height())
 	want := int(math.Round(90 / (200 - h) * (400 - h)))
 	if got := m.viewport.YOffset(); got != want {

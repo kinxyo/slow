@@ -24,3 +24,22 @@ func TestCenterBlock(t *testing.T) {
 		})
 	}
 }
+
+func TestBlockWidth(t *testing.T) {
+	if got := BlockWidth("ab\n\x1b[31mabcd\x1b[0m   \nabc"); got != 4 {
+		t.Errorf("BlockWidth = %d, want 4", got)
+	}
+	if got := BlockWidth(""); got != 0 {
+		t.Errorf("BlockWidth of nothing = %d, want 0", got)
+	}
+}
+
+func TestCenterBlockPad(t *testing.T) {
+	out, pad := CenterBlockPad("abcd", 10)
+	if pad != 3 || out != "   abcd" {
+		t.Errorf("got %q, %d", out, pad)
+	}
+	if out, pad := CenterBlockPad("abcd", 4); pad != 0 || out != "abcd" {
+		t.Errorf("a full-width block is untouched, got %q, %d", out, pad)
+	}
+}

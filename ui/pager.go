@@ -29,8 +29,11 @@ const (
 var pagerHelpHeight int
 
 type (
-	contentRenderedMsg string
-	reloadMsg          struct{}
+	contentRenderedMsg struct {
+		body  string
+		stats renderStats
+	}
+	reloadMsg struct{}
 )
 
 type pagerState int
@@ -49,6 +52,11 @@ type pagerModel struct {
 	// Width of the centered text column. It starts at the configured width and
 	// can be changed while reading; 0 means no wrapping.
 	column int
+
+	// Debug bar: shown on request, with the numbers of the last render.
+	showDebug bool
+	stats     renderStats
+	renders   int
 
 	// Set when the next render should keep the reader at the same place in the
 	// document (after a resize or a column change) instead of the same line.
@@ -74,6 +82,8 @@ func newPagerModel(common *commonModel) pagerModel {
 		state:    pagerStateBrowse,
 		viewport: vp,
 		column:   int(common.cfg.GlamourMaxWidth),
+
+		showDebug: common.cfg.ShowDebugBar,
 	}
 	m.initWatcher()
 	return m
@@ -81,7 +91,11 @@ func newPagerModel(common *commonModel) pagerModel {
 
 func (m *pagerModel) setSize(w, h int) {
 	m.viewport.SetWidth(w)
-	m.viewport.SetHeight(h - statusBarHeight)
+	chrome := statusBarHeight
+	if m.showDebug {
+		chrome++
+	}
+	m.viewport.SetHeight(h - chrome)
 
 	if m.showHelp {
 		if pagerHelpHeight == 0 {
@@ -229,6 +243,13 @@ func (m pagerModel) update(msg tea.Msg) (pagerModel, tea.Cmd) {
 				m.showStatusMessage(pagerStatusMessage{m.columnMessage(), false}),
 			)
 
+		case "D":
+			m.showDebug = !m.showDebug
+			m.setSize(m.common.width, m.common.height)
+			if m.viewport.PastBottom() {
+				m.viewport.GotoBottom()
+			}
+
 		case "?":
 			m.toggleHelp()
 		}
@@ -237,7 +258,8 @@ func (m pagerModel) update(msg tea.Msg) (pagerModel, tea.Cmd) {
 	case contentRenderedMsg:
 		log.Info("content rendered", "state", m.state)
 
-		m.setContent(string(msg))
+		m.stats, m.renders = msg.stats, m.renders+1
+		m.setContent(msg.body)
 		if m.keepPlace {
 			m.keepPlace = false
 			m.viewport.SetYOffset(int(math.Round(m.place * float64(max(0, m.viewport.TotalLineCount()-m.viewport.Height())))))
@@ -273,6 +295,9 @@ func (m pagerModel) update(msg tea.Msg) (pagerModel, tea.Cmd) {
 func (m pagerModel) View() string {
 	var b strings.Builder
 	fmt.Fprint(&b, m.viewport.View()+"\n")
+	if m.showDebug {
+		fmt.Fprint(&b, m.debugBarView()+"\n")
+	}
 
 	// Footer
 	m.statusBarView(&b)
@@ -380,6 +405,7 @@ func (m pagerModel) helpView() (s string) {
 		s += col1[5]
 	}
 	s += "\n+/-      column width        0       reset column width"
+	s += "\nD        debug bar           " + col1[6]
 
 	s = indent(s, 2)
 
@@ -402,21 +428,23 @@ func (m pagerModel) helpView() (s string) {
 
 func renderWithGlamour(m pagerModel, md string) tea.Cmd {
 	return func() tea.Msg {
-		s, err := glamourRender(m, md)
+		s, stats, err := glamourRenderStats(m, md)
 		if err != nil {
 			log.Error("error rendering with Glamour", "error", err)
 			return errMsg{err}
 		}
-		return contentRenderedMsg(s)
+		return contentRenderedMsg{body: s, stats: stats}
 	}
 }
 
 // This is where the magic happens.
-func glamourRender(m pagerModel, markdown string) (string, error) {
+func glamourRenderStats(m pagerModel, markdown string) (string, renderStats, error) {
+	var stats renderStats
+	start := time.Now()
 	trunc := lipgloss.NewStyle().MaxWidth(m.viewport.Width() - lineNumberWidth).Render
 
 	if !m.common.cfg.GlamourEnabled {
-		return markdown, nil
+		return markdown, stats, nil
 	}
 
 	isCode := !utils.IsMarkdownFile(m.currentDocument.Note)
@@ -435,24 +463,28 @@ func glamourRender(m pagerModel, markdown string) (string, error) {
 	}
 	r, err := glamour.NewTermRenderer(options...)
 	if err != nil {
-		return "", fmt.Errorf("error creating glamour renderer: %w", err)
+		return "", stats, fmt.Errorf("error creating glamour renderer: %w", err)
 	}
 
 	if isCode {
 		markdown = utils.WrapCodeBlock(markdown, filepath.Ext(m.currentDocument.Note))
 	} else {
-		markdown = utils.RenderMermaid(markdown, width)
+		markdown, stats.mermaid = utils.RenderMermaidStats(markdown, width)
 	}
 
 	out, err := r.Render(markdown)
 	if err != nil {
-		return "", fmt.Errorf("error rendering markdown: %w", err)
+		return "", stats, fmt.Errorf("error rendering markdown: %w", err)
 	}
 
+	stats.wrap = width
 	if isCode {
 		out = strings.TrimSpace(out)
+		stats.widest = utils.BlockWidth(out)
 	} else {
-		out = utils.CenterBlock(utils.ApplyTextSizing(out), m.viewport.Width())
+		out = utils.ApplyTextSizing(out)
+		stats.widest = utils.BlockWidth(out)
+		out, stats.pad = utils.CenterBlockPad(out, m.viewport.Width())
 	}
 
 	// trim lines
@@ -473,7 +505,10 @@ func glamourRender(m pagerModel, markdown string) (string, error) {
 		}
 	}
 
-	return content.String(), nil
+	stats.lines = len(lines)
+	stats.bytes = content.Len()
+	stats.took = time.Since(start)
+	return content.String(), stats, nil
 }
 
 func (m *pagerModel) initWatcher() {

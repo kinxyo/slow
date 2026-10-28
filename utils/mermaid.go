@@ -13,8 +13,22 @@ var mermaidWraps = []int{28, 26, 24, 22, 20, 18, 16, 14, 12}
 // drawing of the diagram. width is the number of columns available, 0 for
 // unlimited. A block that cannot be drawn is left as it is.
 func RenderMermaid(md string, width int) string {
+	out, _ := RenderMermaidStats(md, width)
+	return out
+}
+
+// MermaidStats counts what RenderMermaidStats did with the mermaid blocks.
+type MermaidStats struct {
+	Drawn    int // replaced by a drawing
+	Fallback int // left as source
+}
+
+// RenderMermaidStats is RenderMermaid that also reports how many blocks were
+// drawn and how many were left as they were.
+func RenderMermaidStats(md string, width int) (string, MermaidStats) {
+	var stats MermaidStats
 	if !strings.Contains(md, "mermaid") {
-		return md
+		return md, stats
 	}
 
 	lines := strings.Split(md, "\n")
@@ -30,12 +44,15 @@ func RenderMermaid(md string, width int) string {
 		if end < len(lines) && isMermaidInfo(info) {
 			if art, err := renderMermaidBlock(strings.Join(lines[i+1:end], "\n"), width); err == nil {
 				block = fencedText(art, lines[i])
+				stats.Drawn++
+			} else {
+				stats.Fallback++
 			}
 		}
 		out = append(out, block...)
 		i = end
 	}
-	return strings.Join(out, "\n")
+	return strings.Join(out, "\n"), stats
 }
 
 // openingFence recognizes a code fence line and returns its marker.
