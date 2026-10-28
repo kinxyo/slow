@@ -80,6 +80,14 @@ Each has a proposed answer; saying "go" accepts them all.
 
 All eight proposals above were accepted ("lets proceed ahead", 2026-10-28).
 
+9. **Width is a centered column** (2026-10-28). Text wraps at 100 columns, or the terminal
+   width when that is smaller, and sits in the middle of the screen. `--width N` sets the
+   column. While reading, `+`/`=` widen it by 10, `-`/`_` narrow it by 10 (40 to 400) and
+   `0` resets it; a status message shows the value, and the reader stays at the same
+   place in the document. This replaces "text uses the terminal width" in *What*, and
+   changes phase 2 and the sidebar threshold (the column, not the terminal, is the text
+   width).
+
 ## Checks before a commit
 
 The Go version of PROCESS.md's list:

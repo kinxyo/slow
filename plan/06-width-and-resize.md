@@ -1,5 +1,11 @@
 # 06 — width and live resize
 
+## Update 2026-10-28
+
+The behaviour is now a centered column, 100 columns by default, adjustable while reading
+(`+`/`-`/`0`); see Decision 9 in [SPEC-1](SPEC-1.md). The investigation below still applies to
+why the text looked narrower than the terminal before that change.
+
 ## Symptom
 
 In the interactive viewer, the text "still doesn't really take the full width" of a
