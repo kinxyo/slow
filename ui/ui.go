@@ -380,12 +380,16 @@ func findLocalFiles(m commonModel) tea.Cmd {
 
 		log.Debug("local directory is", "cwd", cwd)
 
-		// Switch between FindFiles and FindAllFiles to bypass .gitignore rules
+		// .gitignore is only obeyed on request: ignored files are often the
+		// notes and docs worth reading.
 		var ch chan gitcha.SearchResult
-		if m.cfg.ShowAllFiles {
+		switch {
+		case m.cfg.ShowAllFiles:
 			ch, err = gitcha.FindAllFilesExcept(cwd, markdownExtensions, nil)
-		} else {
+		case m.cfg.ObeyGitignore:
 			ch, err = gitcha.FindFilesExcept(cwd, markdownExtensions, ignorePatterns(m))
+		default:
+			ch, err = gitcha.FindAllFilesExcept(cwd, markdownExtensions, ignorePatterns(m))
 		}
 
 		if err != nil {

@@ -40,6 +40,7 @@ var (
 	style            string
 	width            uint
 	showAllFiles     bool
+	obeyGitignore    bool
 	showLineNumbers  bool
 	preserveNewLines bool
 	mouse            bool
@@ -170,6 +171,7 @@ func validateOptions(cmd *cobra.Command) error {
 	pager = viper.GetBool("pager")
 	tui = viper.GetBool("tui")
 	showAllFiles = viper.GetBool("all")
+	obeyGitignore = viper.GetBool("gitignore")
 	preserveNewLines = viper.GetBool("preserveNewLines")
 	showLineNumbers = viper.GetBool("showLineNumbers")
 
@@ -365,6 +367,7 @@ func runTUI(path string, content string) error {
 
 	cfg.Path = path
 	cfg.ShowAllFiles = showAllFiles
+	cfg.ObeyGitignore = obeyGitignore
 	cfg.ShowLineNumbers = showLineNumbers
 	cfg.GlamourMaxWidth = width
 	cfg.EnableMouse = mouse
@@ -412,6 +415,7 @@ func init() {
 	rootCmd.Flags().StringVarP(&style, "style", "s", "auto", "style name or JSON path")
 	rootCmd.Flags().UintVarP(&width, "width", "w", 0, "word-wrap at width (set to 0 to disable)")
 	rootCmd.Flags().BoolVarP(&showAllFiles, "all", "a", false, "show system files and directories (TUI-mode only)")
+	rootCmd.Flags().BoolVar(&obeyGitignore, "gitignore", false, "skip files matched by .gitignore (TUI-mode only)")
 	rootCmd.Flags().BoolVarP(&showLineNumbers, "line-numbers", "l", false, "show line numbers (TUI-mode only)")
 	rootCmd.Flags().BoolVarP(&preserveNewLines, "preserve-new-lines", "n", false, "preserve newlines in the output")
 	rootCmd.Flags().BoolVarP(&mouse, "mouse", "m", false, "enable mouse wheel (TUI-mode only)")
@@ -427,6 +431,7 @@ func init() {
 	_ = viper.BindPFlag("preserveNewLines", rootCmd.Flags().Lookup("preserve-new-lines"))
 	_ = viper.BindPFlag("showLineNumbers", rootCmd.Flags().Lookup("line-numbers"))
 	_ = viper.BindPFlag("all", rootCmd.Flags().Lookup("all"))
+	_ = viper.BindPFlag("gitignore", rootCmd.Flags().Lookup("gitignore"))
 
 	viper.SetDefault("style", "auto")
 	viper.SetDefault("width", 0)
