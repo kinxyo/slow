@@ -1,5 +1,7 @@
 glow
+slo
 dist/
 .envrc
 completions/
 manpages/
+plan/PROCESS.md
