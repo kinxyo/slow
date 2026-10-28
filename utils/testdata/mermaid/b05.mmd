@@ -1,0 +1,6 @@
+stateDiagram-v2
+    [*] --> New
+    New --> Waiting: Record deadline and arrange wakeup
+    Waiting --> Waiting: Checked before deadline
+    Waiting --> Done: Deadline reached; produce result
+    Done --> [*]

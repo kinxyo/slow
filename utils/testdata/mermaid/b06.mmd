@@ -1,0 +1,6 @@
+stateDiagram-v2
+    [*] --> Pending
+    Pending --> Fulfilled: Operation succeeds
+    Pending --> Rejected: Operation fails
+    Fulfilled --> [*]
+    Rejected --> [*]

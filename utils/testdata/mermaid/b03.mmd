@@ -1,0 +1,9 @@
+flowchart TD
+    TRY["Try non-blocking read"] --> RESULT{"Result?"}
+    RESULT -->|"Bytes available"| PROCESS["Process bytes"]
+    RESULT -->|"EOF or error"| CLOSE["Finish or handle failure"]
+    RESULT -->|"Would block"| WATCH["Arrange readable notification"]
+    WATCH --> OTHER["Run other ready work"]
+    OTHER --> WAIT["Wait for events when idle"]
+    WAIT -->|"Socket may be readable"| TRY
+    PROCESS -->|"Need more bytes"| TRY

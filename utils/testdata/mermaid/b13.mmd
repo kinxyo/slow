@@ -1,0 +1,9 @@
+flowchart TB
+    M["main: waiting for run to return"]
+    R["run: result_1 exists; waiting for result_2"]
+    G["generate_request: n = 5"]
+    S["sleep: waiting for deadline"]
+
+    M -->|"called"| R
+    R -->|"called"| G
+    G -->|"called"| S

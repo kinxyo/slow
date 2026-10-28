@@ -1,0 +1,12 @@
+flowchart TB
+    QUEUE["Ready queue"] --> RUN["Executor advances a task"]
+    RUN --> RESULT{"Outcome"}
+    RESULT -->|"Completed"| DONE["Store result; wake any waiter"]
+    RESULT -->|"Cannot progress"| SAVED["Task state remains stored"]
+
+    TIMER["Timer expires"] --> WAKE["Schedule associated task"]
+    IO["I/O event arrives"] --> WAKE
+    WAKE --> QUEUE
+
+    RUN -.->|"Registers waiting condition"| TIMER
+    RUN -.->|"Registers waiting condition"| IO

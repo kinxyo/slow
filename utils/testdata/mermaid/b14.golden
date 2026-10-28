@@ -1,0 +1,22 @@
+                      ●
+                      │
+                      ▼
+                 ╭─────────╮
+                 │ Running │
+                 ╰─┬─────┬─╯
+                   │  ▲  │
+    ┌──────────────┘  └──┼────┐
+    │                    └────┼──┐
+    │ Request blocking sleep  │  │ Function eventually
+    │                         │  │ completes
+    └┐                    ┌───┘  └─┐
+     ▼                    │        ▼
+╭─────────╮               │  ╭──────────╮
+│ Waiting │               │  │ Finished │
+╰────┬────╯               │  ╰──────────╯
+     │ Deadline passes    │ OS schedules thread
+     └───────┐    ┌───────┘
+             ▼    │
+          ╭───────┴──╮
+          │ Runnable │
+          ╰──────────╯

@@ -1,0 +1,11 @@
+flowchart TB
+    A["Task A: stack and saved context"]
+    B["Task B: stack and saved context"]
+    C["Task C: stack and saved context"]
+
+    A --> S["Runtime scheduler"]
+    B --> S
+    C --> S
+
+    S --> T1["OS worker thread 1"]
+    S --> T2["OS worker thread 2"]

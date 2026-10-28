@@ -1,0 +1,8 @@
+flowchart TB
+    START["Start all three workers"]
+    START --> A["Thread A: wait 1 second"]
+    START --> B["Thread B: wait 5 seconds"]
+    START --> C["Thread C: wait 1 second"]
+    A --> JOIN["Wait for all results"]
+    B --> JOIN
+    C --> JOIN

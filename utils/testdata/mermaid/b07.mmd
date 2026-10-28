@@ -1,0 +1,8 @@
+flowchart TD
+    START["Start handler"] --> REQUEST["Await request"]
+    REQUEST -->|"Request available"| USER["Await user"]
+    USER -->|"User available"| ORDERS["Await orders"]
+    ORDERS -->|"Orders available"| SEND["Send response"]
+    REQUEST -.-> SAVED["Preserved continuation and live values"]
+    USER -.-> SAVED
+    ORDERS -.-> SAVED

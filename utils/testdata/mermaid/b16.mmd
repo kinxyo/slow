@@ -1,0 +1,6 @@
+stateDiagram-v2
+    [*] --> New
+    New --> Waiting: Store deadline
+    Waiting --> Waiting: Poll before deadline
+    Waiting --> Done: Poll at or after deadline
+    Done --> [*]

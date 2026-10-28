@@ -1,0 +1,7 @@
+flowchart TD
+    START["Parent starts child"] --> MODE{"Execution mode"}
+    MODE -->|"Child runs inline"| CHILD["Child waits for message"]
+    CHILD --> STUCK["Parent cannot reach send"]
+    MODE -->|"Concurrent progress available"| BOTH["Parent and child can progress"]
+    BOTH --> SEND["Parent sends message"]
+    SEND --> FINISH["Child receives and finishes"]

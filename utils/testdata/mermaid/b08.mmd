@@ -1,0 +1,6 @@
+flowchart TB
+    BEGIN["Request begins"] --> USER["Fetch user"]
+    BEGIN --> PREFS["Fetch independent preferences"]
+    USER --> ORDERS["Fetch user's orders"]
+    ORDERS --> RESPONSE["Build response"]
+    PREFS --> RESPONSE

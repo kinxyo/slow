@@ -1,0 +1,20 @@
+             ●
+             │
+             ▼
+          ╭─────╮
+          │ New │
+          ╰──┬──╯
+             │ Store deadline
+             ▼
+╭────────────────────────╮
+│        Waiting         │
+│ ↻ Poll before deadline │
+╰────────────┬───────────╯
+             │ Poll at or after deadline
+             ▼
+         ╭──────╮
+         │ Done │
+         ╰───┬──╯
+             │
+             ▼
+             ◉

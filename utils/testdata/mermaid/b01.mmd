@@ -1,0 +1,17 @@
+flowchart TB
+    subgraph CPU["CPU execution state"]
+        IP["Instruction pointer: inside sleep"]
+        SP["Stack pointer"]
+    end
+
+    subgraph STACK["Thread's stack: nested active calls"]
+        S["sleep frame"]
+        G["generate_request frame: seconds = 5"]
+        R["run frame: a is already available"]
+        S -->|"returns into"| G
+        G -->|"returns into"| R
+    end
+
+    IP -.-> S
+    SP --> S
+    R --> DATA["Referenced result data"]

@@ -1,0 +1,19 @@
+flowchart TB
+    subgraph BEFORE["While A's handler is running"]
+        STACK["Native stack: loop → handle A"]
+        LOCALS["Current progress: buffer, offset, next step"]
+        STACK --> LOCALS
+    end
+
+    LOCALS -->|"Save before returning"| STATE["Persistent A state: buffer, offset, next step"]
+
+    subgraph AFTER["After the handler returns"]
+        LOOP["Native stack: event loop"]
+        B["Handle B"]
+        C["Handle C"]
+        LOOP --> B
+        LOOP --> C
+    end
+
+    STATE -->|"A becomes ready"| RESUME["Run A's next step"]
+    LOOP --> RESUME

@@ -1,0 +1,7 @@
+flowchart TD
+    A["Start request A"] --> WAIT["Await A"]
+    WAIT --> PENDING{"A finished?"}
+    PENDING -->|"No"| OTHER["Suspend this function; run other tasks"]
+    OTHER -->|"A completion becomes available"| RESUME["Resume this function"]
+    PENDING -->|"Yes"| RESUME
+    RESUME --> B["Now start request B"]

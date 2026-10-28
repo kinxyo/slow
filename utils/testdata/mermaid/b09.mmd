@@ -1,0 +1,9 @@
+flowchart TD
+    QUEUE["Ready-task queue"] --> EXEC["Executor runs a task"]
+    EXEC --> POLL["Poll task"]
+    POLL --> OUTCOME{"Outcome"}
+    OUTCOME -->|"Ready"| DONE["Record result and complete task"]
+    OUTCOME -->|"Pending"| PARK["Task remains suspended"]
+    POLL -.->|"Arrange notification"| DRIVER["Timer and I/O driver"]
+    DRIVER -->|"Event occurs"| WAKE["Wake associated task"]
+    WAKE --> QUEUE

@@ -1,0 +1,6 @@
+stateDiagram-v2
+    [*] --> Running
+    Running --> Waiting: Request blocking sleep
+    Waiting --> Runnable: Deadline passes
+    Runnable --> Running: OS schedules thread
+    Running --> Finished: Function eventually completes

@@ -1,0 +1,22 @@
+              ●
+              │
+              ▼
+           ╭─────╮
+           │ New │
+           ╰──┬──╯
+              │ Record deadline and arrange
+              │ wakeup
+              ▼
+╭───────────────────────────╮
+│          Waiting          │
+│ ↻ Checked before deadline │
+╰─────────────┬─────────────╯
+              │ Deadline reached; produce
+              │ result
+              ▼
+          ╭──────╮
+          │ Done │
+          ╰───┬──╯
+              │
+              ▼
+              ◉

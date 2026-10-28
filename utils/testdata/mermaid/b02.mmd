@@ -1,0 +1,8 @@
+stateDiagram-v2
+    [*] --> Runnable
+    Runnable --> Running: Scheduler selects thread
+    Running --> Waiting: Blocking sleep or I/O
+    Waiting --> Runnable: Deadline or event
+    Running --> Runnable: Preemption
+    Running --> Finished: Thread exits
+    Finished --> [*]

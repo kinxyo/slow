@@ -1,0 +1,14 @@
+flowchart TB
+    JS["JavaScript handler"] --> NET["Network I/O"]
+    JS --> FILE["File-system work"]
+    JS --> TIMER["Timer"]
+
+    NET --> OS["OS I/O notification"]
+    FILE --> POOL["libuv worker pool"]
+    TIMER --> CLOCK["Timer deadline tracking"]
+
+    OS --> LOOP["Event loop dispatches callbacks"]
+    POOL --> LOOP
+    CLOCK --> LOOP
+    LOOP --> CONT["Callbacks and promise continuations"]
+    CONT --> JS
