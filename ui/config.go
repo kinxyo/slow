@@ -1,5 +1,8 @@
 package ui
 
+// DefaultColumn is the width of the text column when no width is asked for.
+const DefaultColumn = 100
+
 // Config contains TUI-specific configuration.
 type Config struct {
 	ShowAllFiles     bool

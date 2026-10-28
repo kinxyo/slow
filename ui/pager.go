@@ -46,6 +46,15 @@ type pagerModel struct {
 	state    pagerState
 	showHelp bool
 
+	// Width of the centered text column. It starts at the configured width and
+	// can be changed while reading; 0 means no wrapping.
+	column int
+
+	// Set when the next render should keep the reader at the same place in the
+	// document (after a resize or a column change) instead of the same line.
+	keepPlace bool
+	place     float64
+
 	statusMessage      string
 	statusMessageTimer *time.Timer
 
@@ -64,6 +73,7 @@ func newPagerModel(common *commonModel) pagerModel {
 		common:   common,
 		state:    pagerStateBrowse,
 		viewport: vp,
+		column:   int(common.cfg.GlamourMaxWidth),
 	}
 	m.initWatcher()
 	return m
@@ -79,6 +89,32 @@ func (m *pagerModel) setSize(w, h int) {
 		}
 		m.viewport.SetHeight(m.viewport.Height() - (statusBarHeight + pagerHelpHeight))
 	}
+}
+
+const (
+	columnStep = 10
+	columnMin  = 40
+	columnMax  = 400
+)
+
+// adjustColumn moves the text column by delta columns, within its limits.
+func adjustColumn(column, delta int) int {
+	return min(max(column+delta, columnMin), columnMax)
+}
+
+// columnMessage tells the reader the column width, and when the terminal is
+// narrower than the column, the width actually used.
+func (m pagerModel) columnMessage() string {
+	if w := m.viewport.Width(); w > 0 && m.column > w {
+		return fmt.Sprintf("Column %d (terminal %d)", m.column, w)
+	}
+	return fmt.Sprintf("Column %d", m.column)
+}
+
+// rememberPlace notes where in the document the reader is, so that the next
+// render can put them back at the same place when the lines reflow.
+func (m *pagerModel) rememberPlace() {
+	m.keepPlace, m.place = true, m.viewport.ScrollPercent()
 }
 
 func (m *pagerModel) setContent(s string) {
@@ -174,6 +210,25 @@ func (m pagerModel) update(msg tea.Msg) (pagerModel, tea.Cmd) {
 		case "r":
 			return m, loadLocalMarkdown(&m.currentDocument)
 
+		case "+", "=", "-", "_", "0":
+			if m.column == 0 {
+				cmds = append(cmds, m.showStatusMessage(pagerStatusMessage{"Wrapping is off (--width 0)", false}))
+				break
+			}
+			switch msg.String() {
+			case "+", "=":
+				m.column = adjustColumn(m.column, columnStep)
+			case "-", "_":
+				m.column = adjustColumn(m.column, -columnStep)
+			default:
+				m.column = int(m.common.cfg.GlamourMaxWidth)
+			}
+			m.rememberPlace()
+			cmds = append(cmds,
+				renderWithGlamour(m, m.currentDocument.Body),
+				m.showStatusMessage(pagerStatusMessage{m.columnMessage(), false}),
+			)
+
 		case "?":
 			m.toggleHelp()
 		}
@@ -183,6 +238,10 @@ func (m pagerModel) update(msg tea.Msg) (pagerModel, tea.Cmd) {
 		log.Info("content rendered", "state", m.state)
 
 		m.setContent(string(msg))
+		if m.keepPlace {
+			m.keepPlace = false
+			m.viewport.SetYOffset(int(math.Round(m.place * float64(max(0, m.viewport.TotalLineCount()-m.viewport.Height())))))
+		}
 		cmds = append(cmds, m.watchFile)
 
 	// The file was changed on disk and we're reloading it
@@ -198,6 +257,7 @@ func (m pagerModel) update(msg tea.Msg) (pagerModel, tea.Cmd) {
 	// We've received terminal dimensions, either for the first time or
 	// after a resize
 	case tea.WindowSizeMsg:
+		m.rememberPlace()
 		return m, renderWithGlamour(m, m.currentDocument.Body)
 
 	case statusMessageTimeoutMsg:
@@ -319,6 +379,7 @@ func (m pagerModel) helpView() (s string) {
 	if len(col1) > 5 {
 		s += col1[5]
 	}
+	s += "\n+/-      column width        0       reset column width"
 
 	s = indent(s, 2)
 
@@ -359,7 +420,7 @@ func glamourRender(m pagerModel, markdown string) (string, error) {
 	}
 
 	isCode := !utils.IsMarkdownFile(m.currentDocument.Note)
-	width := max(0, min(int(m.common.cfg.GlamourMaxWidth), m.viewport.Width())) //nolint:gosec
+	width := max(0, min(m.column, m.viewport.Width()))
 	if isCode {
 		width = 0
 	}

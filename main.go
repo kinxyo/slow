@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
-	"math"
 	"net/http"
 	"net/url"
 	"os"
@@ -196,11 +195,11 @@ func validateOptions(cmd *cobra.Command) error {
 
 	// Detect terminal width
 	if !cmd.Flags().Changed("width") { //nolint:nestif
+		widthAuto = width == 0
 		if isTerminal && width == 0 {
 			w, _, err := term.GetSize(int(os.Stdout.Fd()))
 			if err == nil {
-				width = uint(w) //nolint:gosec
-				widthAuto = true
+				width = min(uint(w), ui.DefaultColumn)
 			}
 		}
 		if width == 0 {
@@ -387,8 +386,7 @@ func runTUI(path string, content string) error {
 	cfg.ShowLineNumbers = showLineNumbers
 	cfg.GlamourMaxWidth = width
 	if widthAuto {
-		// follow the terminal, including when it is resized after startup
-		cfg.GlamourMaxWidth = math.MaxInt16
+		cfg.GlamourMaxWidth = ui.DefaultColumn
 	}
 	cfg.EnableMouse = mouse
 	cfg.PreserveNewLines = preserveNewLines
