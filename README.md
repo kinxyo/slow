@@ -78,12 +78,16 @@ self-loops. Not supported: `LR`/`RL`/`BT`, nested subgraphs, composite states, s
 class and other diagram types. A block that can't be drawn, or doesn't fit the width, is
 left as it is.
 
+## Config
+
+`slo config` opens the config file, `~/.config/slo/slo.yml` (created on first run).
+Settings can also come from `SLO_*` environment variables, `SLO_CONFIG_HOME` points at a
+different config directory, and the log is `~/.cache/slo/slo.log`. slo does not read
+Glow's `~/.config/glow`; copy the file over if you want the same settings.
+
 ## Status
 
-Early. The program still carries Glow's internals in places: the help text, the man
-page and the config and cache directories (`~/.config/glow`, `~/.cache/glow`) still say
-`glow`, and the Go module path is still `charm.land/glow/v3`. Renaming them is in
-[`plan/00-repo-and-rebrand.md`](plan/00-repo-and-rebrand.md).
+Early. See [`plan/`](plan/) for what is built, what is next and the current sprint.
 
 ## Credits
 

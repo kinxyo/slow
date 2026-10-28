@@ -1,10 +1,13 @@
 # 00 — repo and rebrand
 
+**Done** (Sprint 1, phase 0): the module is `github.com/kinxyo/slow`, the binary `slo`, config
+`~/.config/slo/slo.yml`, cache `~/.cache/slo/slo.log`, env prefix `SLO_`. The repo
+`kinxyo/slow` exists and `origin` points at it. What follows is the original plan.
+
 ## Decision
 
-New repo `git@github.com:kinxyo/slow.git` (public, currently empty). Full git history is
-kept so Charm's commits and authorship stay visible. This clone's `origin` still points
-at `kinxyo/glow`.
+New repo `git@github.com:kinxyo/slow.git` (public). Full git history is kept so
+Charm's commits and authorship stay visible.
 
 | Thing        | Value                                                          |
 |--------------|----------------------------------------------------------------|

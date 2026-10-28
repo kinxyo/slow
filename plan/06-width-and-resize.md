@@ -21,12 +21,12 @@ dragged.
 
 ## Hypotheses to check, with the debug bar ([04](04-debug-bar.md))
 
-1. A config value (`width:` in the config file, or `GLOW_*` env) overrides the auto
+1. A config value (`width:` in the config file, or `SLO_*` env) overrides the auto
    width. Unverified: the config file could not be read in the last session.
 2. Glamour's own styles add margins (document margin, code block margin) so the text sits
    inside a narrower column than the wrap width.
 3. The document's paragraphs are hard-wrapped at a smaller width in the source.
-4. The viewer was started in a mode that doesn't set `widthAuto` (the `glow file.md`
+4. The viewer was started in a mode that doesn't set `widthAuto` (the `slo file.md`
    CLI path versus the `-t` TUI path versus `-p`).
 5. Resize re-renders with a stale `viewport` copy: `renderWithGlamour(m, ...)` takes the
    model by value inside the handler; check that the width it sees is the new one.

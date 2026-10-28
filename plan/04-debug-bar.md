@@ -7,7 +7,7 @@ showing the numbers the renderer actually uses makes it visible in the real term
 
 ## Behaviour
 
-- Toggle with `ctrl+d` (or the flag `--debug-bar`); off by default, one line high, drawn
+- Toggle with `D` (capital; `d` and `ctrl+d` already scroll half a page) or the flag `--debug-bar`; off by default, one line high, drawn
   above the status bar.
 - Fields, in this order:
   - terminal size `W×H` as the last `WindowSizeMsg` reported it

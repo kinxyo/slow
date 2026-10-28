@@ -19,7 +19,7 @@ criteria so "done" is checkable.
 - [x] Makefile (`make prod` installs to `~/bin`)
 
 ### Ground work
-- [ ] 00 — commit the above as separate commits, then rebrand to slow/slo
+- [x] 00 — commit the above as separate commits, then rebrand to slow/slo
       — [00-repo-and-rebrand.md](00-repo-and-rebrand.md)
 - [x] 01 — strip inherited CI/release, keep what runs on a free account
       — [01-ci-and-release.md](01-ci-and-release.md)
