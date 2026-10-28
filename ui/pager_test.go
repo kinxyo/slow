@@ -27,7 +27,8 @@ func TestGlamourRenderTextSizing(t *testing.T) {
 	m.currentDocument = markdown{Note: "test.md"}
 	m.setSize(80, 24)
 
-	out, _, err := glamourRenderStats(m, "# Hello\n\n## World\n")
+	r, err := renderDocument(m, "# Hello\n\n## World\n")
+	out := r.body
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -140,7 +141,8 @@ func TestColumnWidthShapesTheText(t *testing.T) {
 	doc := strings.Repeat("lorem ipsum dolor sit amet consectetur ", 80) + "\n"
 	m := newTestPager(100, 200, 40)
 
-	out, _, err := glamourRenderStats(m, doc)
+	outr, err := renderDocument(m, doc)
+	out := outr.body
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -156,7 +158,8 @@ func TestColumnWidthShapesTheText(t *testing.T) {
 	for range 3 {
 		m, _ = m.update(key("-"))
 	}
-	narrow, _, err := glamourRenderStats(m, doc)
+	narrowr, err := renderDocument(m, doc)
+	narrow := narrowr.body
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -172,10 +175,11 @@ func TestColumnWidthShapesTheText(t *testing.T) {
 
 func TestColumnNeverExceedsTheTerminal(t *testing.T) {
 	m := newTestPager(100, 60, 40)
-	out, _, err := glamourRenderStats(m, strings.Repeat("word ", 200)+"\n")
+	r, err := renderDocument(m, strings.Repeat("word ", 200)+"\n")
 	if err != nil {
 		t.Fatal(err)
 	}
+	out := r.body
 	if w := widestLine(out); w > 60 {
 		t.Errorf("text is %d wide on a 60 column terminal", w)
 	}
@@ -198,5 +202,139 @@ func TestPlaceIsKeptWhenTheTextReflows(t *testing.T) {
 	}
 	if m.keepPlace {
 		t.Error("the place should be used up once applied")
+	}
+}
+
+const relayoutDoc = "# Title\n\nSome words in a paragraph that is long enough to wrap, " +
+	"repeated. Some words in a paragraph that is long enough to wrap, repeated. " +
+	"Some words in a paragraph that is long enough to wrap, repeated.\n\n" +
+	"- one\n- two\n\n```go\nfmt.Println(\"hi\")\n```\n\n```mermaid\nflowchart TD\n  A --> B\n```\n"
+
+// show applies a render the way the program does when its message arrives.
+func show(t *testing.T, m pagerModel, doc string) pagerModel {
+	t.Helper()
+	msg, ok := renderWithGlamour(m, doc)().(contentRenderedMsg)
+	if !ok {
+		t.Fatal("expected contentRenderedMsg")
+	}
+	m, _ = m.update(msg)
+	return m
+}
+
+func TestRelayoutOnlyCentersWhenTheWrapIsUnchanged(t *testing.T) {
+	t.Setenv("SLO_TEXT_SIZING", "on") // detected once per process, see TestDebugBarToggle
+	m := show(t, newTestPager(100, 200, 40), relayoutDoc)
+	renders := m.renders
+
+	// a wider terminal: the column is still 100, so glamour would wrap the same
+	m.viewport.SetWidth(260)
+	m.common.width = 260
+	if cmd := m.relayout(); cmd != nil {
+		t.Fatal("a wider terminal should not need another render")
+	}
+	if m.renders != renders || m.layouts != 1 {
+		t.Errorf("renders %d→%d, layouts %d: only the layout should have run", renders, m.renders, m.layouts)
+	}
+
+	// and the result is what a full render at that width gives
+	want, err := renderDocument(m, relayoutDoc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := m.viewport.View(); strings.TrimSpace(ansiSeq.ReplaceAllString(got, "")) == "" {
+		t.Fatal("nothing on screen")
+	}
+	if m.stats.pad != want.stats.pad || m.stats.lines != want.stats.lines || m.stats.bytes != want.stats.bytes {
+		t.Errorf("pad/lines/bytes = %d/%d/%d after relayout, %d/%d/%d from a full render",
+			m.stats.pad, m.stats.lines, m.stats.bytes, want.stats.pad, want.stats.lines, want.stats.bytes)
+	}
+	if m.viewport.TotalLineCount() != want.stats.lines {
+		t.Errorf("the viewport holds %d lines, a full render has %d", m.viewport.TotalLineCount(), want.stats.lines)
+	}
+}
+
+func TestRelayoutRendersAgainWhenTheWrapChanges(t *testing.T) {
+	t.Setenv("SLO_TEXT_SIZING", "on")
+	m := show(t, newTestPager(100, 80, 40), relayoutDoc) // the terminal is the limit: wrap 80
+	if m.textWrap != 80 {
+		t.Fatalf("textWrap = %d, want 80", m.textWrap)
+	}
+
+	m.viewport.SetWidth(90)
+	m.common.width = 90
+	if cmd := m.relayout(); cmd == nil {
+		t.Fatal("a different wrap width needs a new render")
+	}
+	if !m.keepPlace {
+		t.Error("the reader should keep their place across the new render")
+	}
+}
+
+func TestRelayoutNeedsAnotherRenderForLineNumbers(t *testing.T) {
+	t.Setenv("SLO_TEXT_SIZING", "on")
+	m := show(t, newTestPager(100, 200, 40), relayoutDoc)
+	m.common.cfg.ShowLineNumbers = true
+	if cmd := m.relayout(); cmd == nil {
+		t.Error("line numbers are not handled by the quick path")
+	}
+}
+
+func TestRelayoutUsesTheTextThatWasRendered(t *testing.T) {
+	t.Setenv("SLO_TEXT_SIZING", "on")
+	m := newTestPager(100, 80, 40)
+	m.currentDocument.Body = "---\ntitle: x\n---\n\nfrontmatter was removed before rendering\n"
+	m = show(t, m, "frontmatter was removed before rendering\n")
+
+	m.viewport.SetWidth(70)
+	m.common.width = 70
+	cmd := m.relayout() // the wrap changes, so this renders again
+	if cmd == nil {
+		t.Fatal("expected a render")
+	}
+	msg := cmd().(contentRenderedMsg)
+	if strings.Contains(msg.body, "title: x") || msg.src != "frontmatter was removed before rendering\n" {
+		t.Errorf("a resize should render the text that was rendered before, not the raw document: %q", msg.src)
+	}
+}
+
+func TestStaleRenderIsDropped(t *testing.T) {
+	t.Setenv("SLO_TEXT_SIZING", "on")
+	m := newTestPager(100, 200, 40)
+	older := renderWithGlamour(m, "old text\n")()
+	newer := renderWithGlamour(m, "new text\n")()
+
+	// the newer render finishes first, then the older one
+	m, _ = m.update(newer)
+	m, _ = m.update(older)
+	if got := ansiSeq.ReplaceAllString(m.viewport.View(), ""); !strings.Contains(got, "new text") || strings.Contains(got, "old text") {
+		t.Errorf("the older render replaced the newer one:\n%s", got)
+	}
+	if m.renders != 1 {
+		t.Errorf("renders = %d, want 1: the stale one is not counted", m.renders)
+	}
+}
+
+func TestUnloadForgetsTheRender(t *testing.T) {
+	t.Setenv("SLO_TEXT_SIZING", "on")
+	m := show(t, newTestPager(100, 200, 40), relayoutDoc)
+	m.unload()
+	if m.text != "" || m.textSrc != "" {
+		t.Error("leaving the document should drop the text kept for re-centering")
+	}
+}
+
+func TestAFreshDocumentOpensAtTheTop(t *testing.T) {
+	t.Setenv("SLO_TEXT_SIZING", "on")
+	long := strings.Repeat("a paragraph\n\n", 200)
+
+	// the size arrives while nothing is on screen yet, as it does at start-up
+	m := newTestPager(100, 120, 20)
+	m, cmd := m.update(tea.WindowSizeMsg{Width: 120, Height: 20})
+	if cmd == nil {
+		t.Fatal("expected a render")
+	}
+	m = show(t, m, long)
+	if m.viewport.YOffset() != 0 {
+		t.Errorf("the document opened at line %d of %d, want the top", m.viewport.YOffset(), m.viewport.TotalLineCount())
 	}
 }

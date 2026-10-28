@@ -47,10 +47,11 @@ func TestGlamourRenderStats(t *testing.T) {
 	doc := strings.Repeat("lorem ipsum dolor sit amet consectetur ", 80) +
 		"\n\n```mermaid\nflowchart TD\n  A --> B\n```\n\n```mermaid\nsequenceDiagram\n  A->>B: hi\n```\n"
 
-	out, stats, err := glamourRenderStats(m, doc)
+	r, err := renderDocument(m, doc)
 	if err != nil {
 		t.Fatal(err)
 	}
+	out, stats := r.body, r.stats
 	if stats.wrap != 100 {
 		t.Errorf("wrap = %d, want 100", stats.wrap)
 	}
@@ -71,12 +72,12 @@ func TestGlamourRenderStats(t *testing.T) {
 	}
 
 	// wrap follows the terminal when it is narrower than the column
-	_, narrow, err := glamourRenderStats(newTestPager(100, 60, 40), doc)
+	narrow, err := renderDocument(newTestPager(100, 60, 40), doc)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if narrow.wrap != 60 {
-		t.Errorf("wrap on a 60 column terminal = %d, want 60", narrow.wrap)
+	if narrow.stats.wrap != 60 {
+		t.Errorf("wrap on a 60 column terminal = %d, want 60", narrow.stats.wrap)
 	}
 }
 

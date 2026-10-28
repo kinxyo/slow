@@ -5,6 +5,7 @@ import (
 	"math"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"charm.land/bubbles/v2/viewport"
@@ -30,7 +31,11 @@ var pagerHelpHeight int
 
 type (
 	contentRenderedMsg struct {
-		body  string
+		body  string // as shown
+		text  string // before centering, kept to center again without glamour
+		src   string // the markdown it was rendered from
+		wrap  int    // the width it was wrapped at
+		gen   int64  // which render this is; 0 when it is not tracked
 		stats renderStats
 	}
 	reloadMsg struct{}
@@ -54,9 +59,17 @@ type pagerModel struct {
 	column int
 
 	// Debug bar: shown on request, with the numbers of the last render.
-	showDebug bool
-	stats     renderStats
-	renders   int
+	showDebug  bool
+	stats      renderStats
+	renders    int
+	layouts    int
+	layoutTook time.Duration
+
+	// The last render, so that a change that does not alter the wrapping
+	// (a wider terminal, for one) only has to center it again.
+	text     string
+	textSrc  string
+	textWrap int
 
 	// Set when the next render should keep the reader at the same place in the
 	// document (after a resize or a column change) instead of the same line.
@@ -128,7 +141,13 @@ func (m pagerModel) columnMessage() string {
 // rememberPlace notes where in the document the reader is, so that the next
 // render can put them back at the same place when the lines reflow.
 func (m *pagerModel) rememberPlace() {
-	m.keepPlace, m.place = true, m.viewport.ScrollPercent()
+	place := 0.0
+	// a document that fits the screen has no place to keep; asking the
+	// viewport would say "the bottom"
+	if m.viewport.TotalLineCount() > m.viewport.Height() {
+		place = m.viewport.ScrollPercent()
+	}
+	m.keepPlace, m.place = true, place
 }
 
 func (m *pagerModel) setContent(s string) {
@@ -172,6 +191,7 @@ func (m *pagerModel) unload() {
 		m.statusMessageTimer.Stop()
 	}
 	m.state = pagerStateBrowse
+	m.text, m.textSrc = "", ""
 	m.viewport.SetContent("")
 	m.viewport.SetYOffset(0)
 	m.unwatchFile()
@@ -237,9 +257,8 @@ func (m pagerModel) update(msg tea.Msg) (pagerModel, tea.Cmd) {
 			default:
 				m.column = int(m.common.cfg.GlamourMaxWidth)
 			}
-			m.rememberPlace()
 			cmds = append(cmds,
-				renderWithGlamour(m, m.currentDocument.Body),
+				m.relayout(),
 				m.showStatusMessage(pagerStatusMessage{m.columnMessage(), false}),
 			)
 
@@ -258,7 +277,11 @@ func (m pagerModel) update(msg tea.Msg) (pagerModel, tea.Cmd) {
 	case contentRenderedMsg:
 		log.Info("content rendered", "state", m.state)
 
+		if msg.gen != 0 && msg.gen < renderGen.Load() {
+			return m, nil // a newer render is on its way
+		}
 		m.stats, m.renders = msg.stats, m.renders+1
+		m.text, m.textSrc, m.textWrap = msg.text, msg.src, msg.wrap
 		m.setContent(msg.body)
 		if m.keepPlace {
 			m.keepPlace = false
@@ -279,8 +302,7 @@ func (m pagerModel) update(msg tea.Msg) (pagerModel, tea.Cmd) {
 	// We've received terminal dimensions, either for the first time or
 	// after a resize
 	case tea.WindowSizeMsg:
-		m.rememberPlace()
-		return m, renderWithGlamour(m, m.currentDocument.Body)
+		return m, m.relayout()
 
 	case statusMessageTimeoutMsg:
 		m.state = pagerStateBrowse
@@ -426,32 +448,65 @@ func (m pagerModel) helpView() (s string) {
 
 // COMMANDS
 
+// renderGen numbers the renders that were asked for. Renders run in the
+// background and can finish out of order, so a finished one is dropped when a
+// newer one has been asked for since.
+var renderGen atomic.Int64
+
 func renderWithGlamour(m pagerModel, md string) tea.Cmd {
+	gen := renderGen.Add(1)
 	return func() tea.Msg {
-		s, stats, err := glamourRenderStats(m, md)
+		r, err := renderDocument(m, md)
 		if err != nil {
 			log.Error("error rendering with Glamour", "error", err)
 			return errMsg{err}
 		}
-		return contentRenderedMsg{body: s, stats: stats}
+		return contentRenderedMsg{body: r.body, text: r.text, src: md, wrap: r.stats.wrap, gen: gen, stats: r.stats}
 	}
 }
 
-// This is where the magic happens.
-func glamourRenderStats(m pagerModel, markdown string) (string, renderStats, error) {
-	var stats renderStats
+// rendered is a document ready to show, with what is needed to show it again
+// at another width without asking glamour a second time.
+type rendered struct {
+	body  string // as shown: centered, with line numbers when asked for
+	text  string // as glamour made it, before centering
+	stats renderStats
+}
+
+func (m pagerModel) isCode() bool {
+	return !utils.IsMarkdownFile(m.currentDocument.Note)
+}
+
+// wrapWidth is the width glamour wraps the text at.
+func (m pagerModel) wrapWidth() int {
+	if m.isCode() {
+		return 0
+	}
+	return max(0, min(m.column, m.viewport.Width()))
+}
+
+// renderDocument renders a document for the viewer.
+func renderDocument(m pagerModel, markdown string) (rendered, error) {
 	start := time.Now()
-	trunc := lipgloss.NewStyle().MaxWidth(m.viewport.Width() - lineNumberWidth).Render
-
 	if !m.common.cfg.GlamourEnabled {
-		return markdown, stats, nil
+		return rendered{body: markdown}, nil
 	}
+	text, stats, err := renderText(m, markdown)
+	if err != nil {
+		return rendered{}, err
+	}
+	body, pad, lines := layoutText(m, text, stats.widest)
+	stats.pad, stats.lines, stats.bytes = pad, lines, len(body)
+	stats.took = time.Since(start)
+	return rendered{body: body, text: text, stats: stats}, nil
+}
 
-	isCode := !utils.IsMarkdownFile(m.currentDocument.Note)
-	width := max(0, min(m.column, m.viewport.Width()))
-	if isCode {
-		width = 0
-	}
+// renderText is the expensive part: markdown to styled text, wrapped at the
+// column. This is where the magic happens.
+func renderText(m pagerModel, markdown string) (string, renderStats, error) {
+	var stats renderStats
+	isCode := m.isCode()
+	width := m.wrapWidth()
 
 	options := []glamour.TermRendererOption{
 		utils.GlamourStyle(m.common.cfg.GlamourStyle, isCode),
@@ -477,38 +532,64 @@ func glamourRenderStats(m pagerModel, markdown string) (string, renderStats, err
 		return "", stats, fmt.Errorf("error rendering markdown: %w", err)
 	}
 
-	stats.wrap = width
 	if isCode {
 		out = strings.TrimSpace(out)
-		stats.widest = utils.BlockWidth(out)
 	} else {
 		out = utils.ApplyTextSizing(out)
-		stats.widest = utils.BlockWidth(out)
-		out, stats.pad = utils.CenterBlockPad(out, m.viewport.Width())
+	}
+	stats.wrap = width
+	stats.widest = utils.BlockWidth(out)
+	return out, stats, nil
+}
+
+// layoutText is the cheap part: centering and line numbers. widest is the
+// width of the text, as renderText measured it.
+func layoutText(m pagerModel, text string, widest int) (body string, pad, lines int) {
+	isCode := m.isCode()
+	if !isCode {
+		pad = utils.CenterPadding(widest, m.viewport.Width())
+		text = utils.PadBlock(text, pad)
+	}
+	lines = strings.Count(text, "\n") + 1
+	if !isCode && !m.common.cfg.ShowLineNumbers {
+		return text, pad, lines
 	}
 
-	// trim lines
-	lines := strings.Split(out, "\n")
-
+	trunc := lipgloss.NewStyle().MaxWidth(m.viewport.Width() - lineNumberWidth).Render
 	var content strings.Builder
-	for i, s := range lines {
-		if isCode || m.common.cfg.ShowLineNumbers {
-			content.WriteString(m.common.styles.lineNumberStyle(fmt.Sprintf("%"+fmt.Sprint(lineNumberWidth)+"d", i+1)))
-			content.WriteString(trunc(s))
-		} else {
-			content.WriteString(s)
-		}
+	for i, s := range strings.Split(text, "\n") {
+		content.WriteString(m.common.styles.lineNumberStyle(fmt.Sprintf("%"+fmt.Sprint(lineNumberWidth)+"d", i+1)))
+		content.WriteString(trunc(s))
 
 		// don't add an artificial newline after the last split
-		if i+1 < len(lines) {
+		if i+1 < lines {
 			content.WriteRune('\n')
 		}
 	}
+	return content.String(), pad, lines
+}
 
-	stats.lines = len(lines)
-	stats.bytes = content.Len()
-	stats.took = time.Since(start)
-	return content.String(), stats, nil
+// relayout shows the document again after the terminal or the column changed.
+// When glamour would wrap at the same width as before, only the centering
+// changes and that is done on the spot; otherwise it returns the command that
+// renders the document again, and the reader keeps their place in it.
+func (m *pagerModel) relayout() tea.Cmd {
+	if m.text != "" && m.wrapWidth() == m.textWrap && !m.isCode() && !m.common.cfg.ShowLineNumbers {
+		start := time.Now()
+		body, pad, lines := layoutText(*m, m.text, m.stats.widest)
+		m.setContent(body)
+		m.stats.pad, m.stats.lines, m.stats.bytes = pad, lines, len(body)
+		m.layouts++
+		m.layoutTook = time.Since(start)
+		return nil
+	}
+
+	m.rememberPlace()
+	src := m.textSrc
+	if src == "" {
+		src = m.currentDocument.Body
+	}
+	return renderWithGlamour(*m, src)
 }
 
 func (m *pagerModel) initWatcher() {
