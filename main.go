@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"math"
 	"net/http"
 	"net/url"
 	"os"
@@ -41,6 +42,7 @@ var (
 	width            uint
 	showAllFiles     bool
 	obeyGitignore    bool
+	widthAuto        bool
 	showLineNumbers  bool
 	preserveNewLines bool
 	mouse            bool
@@ -198,10 +200,7 @@ func validateOptions(cmd *cobra.Command) error {
 			w, _, err := term.GetSize(int(os.Stdout.Fd()))
 			if err == nil {
 				width = uint(w) //nolint:gosec
-			}
-
-			if width > 120 {
-				width = 120
+				widthAuto = true
 			}
 		}
 		if width == 0 {
@@ -316,6 +315,9 @@ func executeCLI(cmd *cobra.Command, src *source, w io.Writer) error {
 	}
 
 	out = utils.ApplyTextSizing(out)
+	if !isCode {
+		out = centerOnTerminal(out)
+	}
 
 	// display
 	switch {
@@ -350,6 +352,20 @@ func executeCLI(cmd *cobra.Command, src *source, w io.Writer) error {
 	}
 }
 
+// centerOnTerminal centers rendered markdown on the terminal. Output that is
+// piped or redirected is left as it is.
+func centerOnTerminal(out string) string {
+	fd := int(os.Stdout.Fd())
+	if !term.IsTerminal(fd) {
+		return out
+	}
+	w, _, err := term.GetSize(fd)
+	if err != nil {
+		return out
+	}
+	return utils.CenterBlock(out, w)
+}
+
 func runTUI(path string, content string) error {
 	// detect text sizing support before bubbletea takes over the terminal
 	_ = utils.TextSizingEnabled()
@@ -370,6 +386,10 @@ func runTUI(path string, content string) error {
 	cfg.ObeyGitignore = obeyGitignore
 	cfg.ShowLineNumbers = showLineNumbers
 	cfg.GlamourMaxWidth = width
+	if widthAuto {
+		// follow the terminal, including when it is resized after startup
+		cfg.GlamourMaxWidth = math.MaxInt16
+	}
 	cfg.EnableMouse = mouse
 	cfg.PreserveNewLines = preserveNewLines
 
