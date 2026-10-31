@@ -14,14 +14,14 @@ func TestDebugInfoLine(t *testing.T) {
 		viewW: 200, viewH: 48,
 		column: 100,
 		stats: renderStats{
-			wrap: 100, pad: 49, lines: 1770, widest: 100, bytes: 118000,
+			wrap: 100, lines: 1770, widest: 100, bytes: 118000,
 			took: 12500 * time.Microsecond, mermaid: utils.MermaidStats{Drawn: 18},
 		},
 		renders: 3, yOffset: 120, totalLines: 1770, percent: 0.067,
 	}
 	got := d.line(0)
 	for _, want := range []string{
-		"term 200×50", "view 200×48", "col 100 wrap 100 pad 49",
+		"term 200×50", "view 200×48", "col 100 wrap 100",
 		"1770 lines, widest 100", "118 kB", "y 120/1770 (6%)",
 		"render 12.5ms #3", "mermaid 18 drawn, 0 plain", "sizing off",
 	} {
@@ -57,9 +57,6 @@ func TestGlamourRenderStats(t *testing.T) {
 	}
 	if stats.widest < 80 || stats.widest > 100 {
 		t.Errorf("widest = %d, want about 100", stats.widest)
-	}
-	if want := (200 - stats.widest) / 2; stats.pad < want-1 || stats.pad > want+1 {
-		t.Errorf("pad = %d, want about %d", stats.pad, want)
 	}
 	if stats.lines != strings.Count(out, "\n")+1 || stats.bytes != len(out) {
 		t.Errorf("lines/bytes = %d/%d, output has %d/%d", stats.lines, stats.bytes, strings.Count(out, "\n")+1, len(out))

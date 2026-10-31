@@ -13,6 +13,11 @@ by a scanner; rendering is two stages (glamour, then centering); a resize that l
 width alone only re-centers (about 27 ms); stale renders are dropped; the place is kept only
 when there is something to keep. Checked in the real binary through a pseudo-terminal.
 
+## Update 2026-10-31
+
+The column is no longer centered (Spec 1, decision 10); the text is left-aligned again and a
+resize that keeps the wrap width shows the same text without asking glamour.
+
 ## Update 2026-10-28
 
 The behaviour is now a centered column, 100 columns by default, adjustable while reading

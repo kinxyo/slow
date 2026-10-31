@@ -21,7 +21,8 @@ By the end of the sprint, on a long markdown file:
 - `]`/`[` jump between headings, `}`/`{` between top-level ones;
 - a contents sidebar lists the `#` and `##` headings when the terminal is wide enough, and
   follows the scroll position;
-- text uses the terminal width, follows live resizing, and is centered when narrower;
+- text wraps at a column the reader can change, sits at the left edge, and follows live
+  resizing;
 - a debug bar (`D`) shows the numbers behind the layout;
 - the project is named slow, binary `slo`, with its own config directory.
 
@@ -86,7 +87,22 @@ All eight proposals above were accepted ("lets proceed ahead", 2026-10-28).
    `0` resets it; a status message shows the value, and the reader stays at the same
    place in the document. This replaces "text uses the terminal width" in *What*, and
    changes phase 2 and the sidebar threshold (the column, not the terminal, is the text
-   width).
+   width). *Changed by 10: the column is no longer centered.*
+10. **Text is left-aligned again** (2026-10-31). Centering looked broken: it centered the
+    whole document on its widest line, and a mermaid diagram wider than the text column
+    pushed every line off to one side. The column, its keys and `--width` stay; the text
+    starts at the left edge with glamour's margin, as in Glow. This also applies to the
+    output printed without the viewer.
+11. **Releases are tag-only, work happens on `dev`** (2026-10-31). Answers proposal 8:
+    pushing a `v*` tag publishes a release named after the tag; branch pushes only run
+    CI. All work and pushes go to the `dev` branch; `main` moves when kinxyo says so.
+12. **The pseudo-terminal scripts are in the repo** (2026-10-31), under `scripts/tty/`.
+    Saving the column width between sessions stays open (no decision; not built).
+13. **Sidebar threshold stays relative** (2026-10-31). kinxyo's full-screen width isn't
+    known (the shell here has no terminal to ask), so phase 5 keeps proposal 7: the
+    sidebar shows when the terminal has room for an 80 column text plus the sidebar and
+    gap (110 columns), and the text then wraps at the smaller of the column and what is
+    left. The width is checked against a real screen when phase 5 is reviewed.
 
 ## Checks before a commit
 
@@ -116,9 +132,10 @@ The Go version of PROCESS.md's list:
   slo inherited that until phase 2, which is why text never used the width of the screen. The
   template no longer sets it, but a file that was already written still does, and a width in
   the file counts as an explicit choice. Delete the line, or set `width: 100`.
-- **The terminal check is not in the repo.** Phase 2 was checked by driving the real binary in
-  a pseudo-terminal with a small screen emulator (answering the start-up colour and cursor
-  queries); the scripts are scratch files, not committed.
+- **The terminal check is minimal.** `scripts/tty/` drives the real binary in a pseudo-terminal
+  with a small screen emulator (`emu.py`). It knows only the escape sequences slo has needed so
+  far; a screen that looks stale is more likely a missing sequence than a bug in slo (reverse
+  index, `ESC M`, was missing until 2026-10-31).
 
 ## As built
 

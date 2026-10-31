@@ -15,7 +15,7 @@ criteria so "done" is checkable.
       source block as fallback (`utils/mermaid*.go`) — see [05-mermaid.md](05-mermaid.md)
 - [x] `.gitignore` ignored by default, `--gitignore` to obey it
 - [x] Width cap of 120 removed, pager follows the terminal
-- [x] Rendered markdown centered in the terminal (`utils/center.go`)
+- [x] ~~Rendered markdown centered in the terminal~~ — undone 2026-10-31, left-aligned again (Spec 1, decision 10)
 - [x] Makefile (`make prod` installs to `~/bin`)
 
 ### Ground work

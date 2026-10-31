@@ -14,9 +14,8 @@ import (
 // renderStats describes one render of the document, for the debug bar.
 type renderStats struct {
 	wrap    int           // width handed to glamour, 0 when not wrapping
-	pad     int           // columns of centering padding added
 	lines   int           // lines of rendered text
-	widest  int           // width of the widest line, padding excluded
+	widest  int           // width of the widest line
 	bytes   int           // size of the rendered text
 	took    time.Duration // time the render took, mermaid included
 	mermaid utils.MermaidStats
@@ -29,7 +28,7 @@ type debugInfo struct {
 	column       int
 	stats        renderStats
 	renders      int
-	layouts      int           // times the text was only centered again
+	layouts      int           // times the text was only laid out again
 	layoutTook   time.Duration // the last of them
 	yOffset      int
 	totalLines   int
@@ -42,7 +41,7 @@ func (d debugInfo) line(width int) string {
 	parts := []string{
 		fmt.Sprintf("term %d×%d", d.termW, d.termH),
 		fmt.Sprintf("view %d×%d", d.viewW, d.viewH),
-		fmt.Sprintf("col %d wrap %d pad %d", d.column, d.stats.wrap, d.stats.pad),
+		fmt.Sprintf("col %d wrap %d", d.column, d.stats.wrap),
 		fmt.Sprintf("%d lines, widest %d, %s", d.stats.lines, d.stats.widest, humanize.Bytes(uint64(max(0, d.stats.bytes)))),
 		fmt.Sprintf("y %d/%d (%d%%)", d.yOffset, d.totalLines, int(d.percent*100)),
 		fmt.Sprintf("render %.1fms #%d", float64(d.stats.took.Microseconds())/1000, d.renders),

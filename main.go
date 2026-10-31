@@ -315,9 +315,6 @@ func executeCLI(cmd *cobra.Command, src *source, w io.Writer) error {
 	}
 
 	out = utils.ApplyTextSizing(out)
-	if !isCode {
-		out = centerOnTerminal(out)
-	}
 
 	// display
 	switch {
@@ -350,20 +347,6 @@ func executeCLI(cmd *cobra.Command, src *source, w io.Writer) error {
 		}
 		return nil
 	}
-}
-
-// centerOnTerminal centers rendered markdown on the terminal. Output that is
-// piped or redirected is left as it is.
-func centerOnTerminal(out string) string {
-	fd := int(os.Stdout.Fd())
-	if !term.IsTerminal(fd) {
-		return out
-	}
-	w, _, err := term.GetSize(fd)
-	if err != nil {
-		return out
-	}
-	return utils.CenterBlock(out, w)
 }
 
 func runTUI(path string, content string) error {

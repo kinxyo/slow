@@ -20,9 +20,8 @@ beside the text, as quick links. Depends on the heading list from
 - `tab` toggles focus between text and sidebar; in the sidebar `j`/`k` move the selection
   and `enter` jumps to that heading. `t` toggles the sidebar on and off regardless of width
   (when there is room).
-- The text column is centered in what remains after the sidebar. This changes the
-  centering in `ui/pager.go` (`utils.CenterBlock`), which currently centers over the full
-  viewport width.
+- The text stays at the left edge and wraps at the smaller of the column and the width
+  left beside the sidebar (Spec 1, decisions 10 and 13).
 
 ## Layout notes
 

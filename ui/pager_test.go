@@ -151,8 +151,8 @@ func TestColumnWidthShapesTheText(t *testing.T) {
 	if wide > 100 || wide < 80 {
 		t.Errorf("a 100 column text should be about 100 wide, got %d", wide)
 	}
-	if want := (200 - wide) / 2; pad < want-1 || pad > want+1 {
-		t.Errorf("the text should be centered on 200 columns: padding %d, want about %d", pad, want)
+	if pad > 2 {
+		t.Errorf("the text should start at the left edge: padding %d", pad)
 	}
 
 	for range 3 {
@@ -168,8 +168,8 @@ func TestColumnWidthShapesTheText(t *testing.T) {
 	if nw > 70 || nw < 55 || nw >= wide {
 		t.Errorf("after narrowing to 70 the text should be about 70 wide, got %d (was %d)", nw, wide)
 	}
-	if npad <= pad {
-		t.Errorf("a narrower column leaves more room on the sides: padding %d after, %d before", npad, pad)
+	if npad != pad {
+		t.Errorf("a narrower column keeps the text at the left edge: padding %d after, %d before", npad, pad)
 	}
 }
 
@@ -221,7 +221,7 @@ func show(t *testing.T, m pagerModel, doc string) pagerModel {
 	return m
 }
 
-func TestRelayoutOnlyCentersWhenTheWrapIsUnchanged(t *testing.T) {
+func TestRelayoutSkipsGlamourWhenTheWrapIsUnchanged(t *testing.T) {
 	t.Setenv("SLO_TEXT_SIZING", "on") // detected once per process, see TestDebugBarToggle
 	m := show(t, newTestPager(100, 200, 40), relayoutDoc)
 	renders := m.renders
@@ -244,9 +244,9 @@ func TestRelayoutOnlyCentersWhenTheWrapIsUnchanged(t *testing.T) {
 	if got := m.viewport.View(); strings.TrimSpace(ansiSeq.ReplaceAllString(got, "")) == "" {
 		t.Fatal("nothing on screen")
 	}
-	if m.stats.pad != want.stats.pad || m.stats.lines != want.stats.lines || m.stats.bytes != want.stats.bytes {
-		t.Errorf("pad/lines/bytes = %d/%d/%d after relayout, %d/%d/%d from a full render",
-			m.stats.pad, m.stats.lines, m.stats.bytes, want.stats.pad, want.stats.lines, want.stats.bytes)
+	if m.stats.lines != want.stats.lines || m.stats.bytes != want.stats.bytes {
+		t.Errorf("lines/bytes = %d/%d after relayout, %d/%d from a full render",
+			m.stats.lines, m.stats.bytes, want.stats.lines, want.stats.bytes)
 	}
 	if m.viewport.TotalLineCount() != want.stats.lines {
 		t.Errorf("the viewport holds %d lines, a full render has %d", m.viewport.TotalLineCount(), want.stats.lines)
@@ -319,7 +319,7 @@ func TestUnloadForgetsTheRender(t *testing.T) {
 	m := show(t, newTestPager(100, 200, 40), relayoutDoc)
 	m.unload()
 	if m.text != "" || m.textSrc != "" {
-		t.Error("leaving the document should drop the text kept for re-centering")
+		t.Error("leaving the document should drop the text kept for laying out again")
 	}
 }
 
