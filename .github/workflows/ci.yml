@@ -1,10 +1,10 @@
 name: ci
 
-# Tests and builds every branch and pull request. main is also handled by
+# Tests and builds every branch and pull request. Version tags are handled by
 # release.yaml, which tests again before it publishes.
 on:
   push:
-    branches-ignore: [main]
+    branches: ['**']
   pull_request:
 
 jobs:
