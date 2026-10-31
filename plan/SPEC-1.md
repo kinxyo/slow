@@ -137,6 +137,14 @@ The Go version of PROCESS.md's list:
   far; a screen that looks stale is more likely a missing sequence than a bug in slo (reverse
   index, `ESC M`, was missing until 2026-10-31).
 
+- **Fixed 2026-10-31: big gaps under headings in kitty** (inherited from Glow). The viewer
+  padded every line to the screen width counting scaled heading text as zero wide, so a heading
+  row spilled onto the next row (about 3.5 empty rows under a `###` instead of 1.5); the painter
+  now drops padding that has no background. Level 3 headings were cut into 1.5x pieces per style
+  run, and a piece of fewer than 4 columns left a gap ("Open  Resource"); pieces now run on
+  across style changes. Checked on the bytes sent to the terminal; how kitty draws them is
+  checked by kinxyo.
+
 ## As built
 
 _(filled in when the spec closes)_

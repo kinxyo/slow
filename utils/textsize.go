@@ -253,17 +253,28 @@ func writeSizedLine(b *strings.Builder, level int, ln string, continuation bool)
 		}
 	}
 
+	if firstContent < 0 {
+		b.WriteString(strings.Join(segmentValues(segs), ""))
+		return
+	}
+
+	// The part of the line that is scaled: its text, and the escapes inside
+	// it. Spaces after the last text stay as they are.
+	var sized, after []segment
 	for i, sg := range segs {
-		if sg.escape || firstContent < 0 {
-			b.WriteString(sg.value)
-			continue
-		}
 		text := sg.value
 		switch {
-		case i < firstContent && continuation:
-			b.WriteString(text)
-			continue
 		case i > lastContent:
+			after = append(after, sg)
+			continue
+		case sg.escape:
+			if i < firstContent {
+				b.WriteString(text)
+			} else {
+				sized = append(sized, sg)
+			}
+			continue
+		case i < firstContent && continuation:
 			b.WriteString(text)
 			continue
 		}
@@ -275,13 +286,48 @@ func writeSizedLine(b *strings.Builder, level int, ln string, continuation bool)
 		var trail string
 		if i == lastContent {
 			trimmed := strings.TrimRight(text, " \t")
-			trail = text[len(trimmed):]
-			text = trimmed
+			trail, text = text[len(trimmed):], trimmed
 		}
 		if text != "" {
-			b.WriteString(sizedChunk(level, text))
+			sized = append(sized, segment{value: text})
 		}
-		b.WriteString(trail)
+		if trail != "" {
+			after = append([]segment{{value: trail}}, after...)
+		}
+	}
+	writeSized(b, level, sized)
+	b.WriteString(strings.Join(segmentValues(after), ""))
+}
+
+func segmentValues(segs []segment) []string {
+	values := make([]string, len(segs))
+	for i, sg := range segs {
+		values[i] = sg.value
+	}
+	return values
+}
+
+// writeSized writes text scaled for a heading level. Level 3 headings are
+// written in pieces that run on across style changes (see tightChunks).
+func writeSized(b *strings.Builder, level int, segs []segment) {
+	if level == 3 {
+		t := tightChunks{b: b}
+		for _, sg := range segs {
+			if sg.escape {
+				t.escape(sg.value)
+			} else {
+				t.text(printable(sg.value))
+			}
+		}
+		t.flush()
+		return
+	}
+	for _, sg := range segs {
+		if sg.escape {
+			b.WriteString(sg.value)
+		} else {
+			b.WriteString(sizedChunk(level, sg.value))
+		}
 	}
 }
 
@@ -320,12 +366,7 @@ func scanEscape(s string) string {
 }
 
 func sizedChunk(level int, text string) string {
-	text = strings.Map(func(r rune) rune {
-		if r < 0x20 || (r >= 0x7f && r <= 0x9f) {
-			return -1
-		}
-		return r
-	}, text)
+	text = printable(text)
 	if text == "" {
 		return ""
 	}
@@ -337,6 +378,16 @@ func sizedChunk(level int, text string) string {
 	default:
 		return osc66TightChunks(text)
 	}
+}
+
+// printable drops control characters, which have no place in an OSC 66 payload.
+func printable(text string) string {
+	return strings.Map(func(r rune) rune {
+		if r < 0x20 || (r >= 0x7f && r <= 0x9f) {
+			return -1
+		}
+		return r
+	}, text)
 }
 
 func osc66Chunks(meta, text string) string {
@@ -359,29 +410,56 @@ func osc66Chunks(meta, text string) string {
 
 func osc66TightChunks(text string) string {
 	var b strings.Builder
-	var chunk strings.Builder
-	width := 0
-	flush := func() {
-		if chunk.Len() == 0 {
-			return
-		}
-		w := (width*3 + 3) / 4
-		writeOSC66(&b, fmt.Sprintf("s=2:n=3:d=4:w=%d", w), chunk.String())
-		chunk.Reset()
-		width = 0
-	}
-	g := uniseg.NewGraphemes(text)
+	t := tightChunks{b: &b}
+	t.text(text)
+	t.flush()
+	return b.String()
+}
+
+// tightChunks writes text at 1.5x in pieces of 4 columns, the widest that
+// scales to a whole number of cells (w=3). A narrower piece is given whole
+// cells too and leaves a gap after it, so a piece runs on across style changes
+// and only the last one of a line can be narrower. An escape met inside a
+// piece is written after it: its first few characters keep the style before.
+type tightChunks struct {
+	b       *strings.Builder
+	chunk   strings.Builder
+	width   int
+	pending []string
+}
+
+func (t *tightChunks) text(s string) {
+	g := uniseg.NewGraphemes(s)
 	for g.Next() {
 		cluster := g.Str()
 		cw := uniseg.StringWidth(cluster)
-		if width > 0 && width+cw > 4 {
-			flush()
+		if t.width > 0 && t.width+cw > 4 {
+			t.flush()
 		}
-		chunk.WriteString(cluster)
-		width += cw
+		t.chunk.WriteString(cluster)
+		t.width += cw
 	}
-	flush()
-	return b.String()
+}
+
+func (t *tightChunks) escape(seq string) {
+	if t.chunk.Len() == 0 {
+		t.b.WriteString(seq)
+		return
+	}
+	t.pending = append(t.pending, seq)
+}
+
+func (t *tightChunks) flush() {
+	if t.chunk.Len() > 0 {
+		w := (t.width*3 + 3) / 4
+		writeOSC66(t.b, fmt.Sprintf("s=2:n=3:d=4:w=%d", w), t.chunk.String())
+		t.chunk.Reset()
+		t.width = 0
+	}
+	for _, seq := range t.pending {
+		t.b.WriteString(seq)
+	}
+	t.pending = nil
 }
 
 func writeOSC66(b *strings.Builder, meta, text string) {

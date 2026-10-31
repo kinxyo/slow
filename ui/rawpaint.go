@@ -3,8 +3,10 @@ package ui
 import (
 	"io"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
+	"unicode/utf8"
 
 	tea "charm.land/bubbletea/v2"
 	"golang.org/x/term"
@@ -105,11 +107,86 @@ func (p *rawPainter) paint(frame string) tea.Cmd {
 
 		var b strings.Builder
 		b.WriteString("\x1b[?2026h\x1b[H\x1b[2J")
-		b.WriteString(strings.ReplaceAll(frame, "\n", "\r\n"))
+		for i, line := range strings.Split(frame, "\n") {
+			if i > 0 {
+				b.WriteString("\r\n")
+			}
+			b.WriteString(trimPadding(line))
+		}
 		b.WriteString("\x1b[?2026l")
 		_, _ = io.WriteString(p.w, b.String())
 		return nil
 	}
+}
+
+// trimPadding drops the spaces that pad a line out to the width of the
+// screen, and the colors that only style those spaces. The screen is cleared
+// before every frame, so they show nothing, and they do harm next to scaled
+// heading text: counted at the unscaled width they spill onto the next row,
+// and on the row below a heading they are written over its lower half.
+// Spaces under a background color are kept.
+func trimPadding(line string) string {
+	cut := 0         // the line is kept up to here
+	escapes := false // whether what follows cut holds escapes
+	background := false
+	for i := 0; i < len(line); {
+		switch {
+		case line[i] == ' ' && !background:
+			i++
+		case strings.HasPrefix(line[i:], "\x1b["):
+			end := i + 2
+			for end < len(line) && (line[end] < 0x40 || line[end] > 0x7e) {
+				end++
+			}
+			if end == len(line) || line[end] != 'm' {
+				return line // not a style: leave the line alone
+			}
+			background = sgrBackground(line[i+2:end], background)
+			escapes = true
+			i = end + 1
+		default:
+			_, size := utf8.DecodeRuneInString(line[i:])
+			i += size
+			cut, escapes = i, false
+		}
+	}
+	if cut == len(line) {
+		return line
+	}
+	if escapes {
+		return line[:cut] + "\x1b[m"
+	}
+	return line[:cut]
+}
+
+// sgrBackground reports whether a background (a color or reverse video) is
+// on after an SGR sequence with these parameters, given whether it was on
+// before.
+func sgrBackground(params string, on bool) bool {
+	ps := strings.Split(params, ";")
+	for i := 0; i < len(ps); i++ {
+		n, _ := strconv.Atoi(ps[i]) // an empty parameter is 0
+		switch {
+		case n == 0 || n == 27 || n == 49:
+			on = false
+		case n == 38 || n == 58: // extended foreground or underline color
+			if i+1 < len(ps) && ps[i+1] == "2" {
+				i += 4
+			} else {
+				i += 2
+			}
+		case n == 7 || n == 48 || (n >= 40 && n <= 47) || (n >= 100 && n <= 107):
+			on = true
+			if n == 48 {
+				if i+1 < len(ps) && ps[i+1] == "2" {
+					i += 4
+				} else {
+					i += 2
+				}
+			}
+		}
+	}
+	return on
 }
 
 // paintModel wraps the root model, painting a frame after every processed

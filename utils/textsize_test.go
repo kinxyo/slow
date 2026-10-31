@@ -7,6 +7,7 @@ import (
 
 	"charm.land/glamour/v2"
 	"charm.land/glamour/v2/styles"
+	"github.com/rivo/uniseg"
 )
 
 func renderPlainAndSized(t *testing.T, markdown string, wordWrap int) (string, string) {
@@ -219,4 +220,40 @@ func lineIndex(t *testing.T, lines []string, substr string) int {
 	}
 	t.Fatalf("no line contains %q", substr)
 	return -1
+}
+
+// osc66Payloads returns the metadata and text of every OSC 66 sequence in s.
+func osc66Payloads(s string) (metas, texts []string) {
+	for {
+		i := strings.Index(s, "\x1b]66;")
+		if i < 0 {
+			return metas, texts
+		}
+		s = s[i+len("\x1b]66;"):]
+		end := strings.Index(s, osc66ST)
+		meta, text, _ := strings.Cut(s[:end], ";")
+		metas, texts = append(metas, meta), append(texts, text)
+		s = s[end+len(osc66ST):]
+	}
+}
+
+func TestApplyTextSizingTightChunksRunAcrossStyles(t *testing.T) {
+	// glamour styles "Open" apart from the rest; the pieces must still be four
+	// columns each, or a narrower one leaves a gap ("Open  Resource")
+	_, sized := renderPlainAndSized(t, "### Identifying an *Open* Resource\n\npara\n", 100)
+	line := sized[strings.Index(sized, "\x1b]66;"):]
+	line = line[:strings.IndexByte(line, '\n')]
+
+	metas, texts := osc66Payloads(line)
+	if got := strings.Join(texts, ""); got != "Identifying an Open Resource" {
+		t.Errorf("scaled text = %q", got)
+	}
+	for i, text := range texts[:len(texts)-1] {
+		if w := uniseg.StringWidth(text); w != 4 || metas[i] != "s=2:n=3:d=4:w=3" {
+			t.Errorf("piece %d is %q (%d columns, %s), want four columns at w=3", i, text, w, metas[i])
+		}
+	}
+	if !strings.Contains(line, "\x1b[") || !strings.Contains(sized, "para") {
+		t.Errorf("styles or text lost: %q", sized)
+	}
 }
